@@ -25,3 +25,9 @@ import pool from '../db.js';
     return rows[0];
   }
 
+  export async function findUserById(id) {
+    const query = `SELECT * FROM usuarios WHERE id = $1`;
+    const { rows } = await pool.query(query, [id]);
+    return rows[0];
+  }
+

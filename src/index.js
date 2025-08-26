@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.js';
 import wineRoutes from './routes/wineRoutes.js';
+import { authenticate } from './middlewares/auth.js';
 
 const app = express();
 
@@ -13,7 +14,7 @@ app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
-app.use('/api/wines', wineRoutes);
+app.use('/api/wines', authenticate, wineRoutes);
 
 const PORT = 3000;
 app.listen(PORT, () => {

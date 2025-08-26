@@ -3,7 +3,18 @@ import { getAllWines, getWineById } from '../models/wineModel.js';
 export const listWines = async (req, res) => {
   try {
     const wines = await getAllWines();
-    res.json(wines);
+
+    const adjustedWines = wines.map(wine => {
+      let precio = parseFloat(wine.costo);
+
+      // Ajuste según rol
+      if (req.user.rol_id === 2) precio *= 1.05;
+      else if (req.user.rol_id === 3) precio *= 1.20;
+
+      return { ...wine, costo: precio.toFixed(2) };
+    });
+
+    res.json(adjustedWines);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

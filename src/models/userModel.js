@@ -1,0 +1,27 @@
+// models/userModel.js
+import pool from '../db.js';
+
+
+  export async function createUser({ nombre, rol_id, email, contrasena, nombreDeUsuario, telefono }) {
+    const query = `
+      INSERT INTO usuarios (nombre, rol_id, email, contrasena, nombreDeUsuario, telefono)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *;
+    `;
+    const values = [nombre, rol_id, email, contrasena, nombreDeUsuario, telefono];
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  }
+
+  export async function findUserByEmail(email) {
+    const query = `SELECT * FROM usuarios WHERE email = $1`;
+    const { rows } = await pool.query(query, [email]);
+    return rows[0];
+  }
+
+  export async function findByNombreDeUsuario(nombreDeUsuario) {
+    const query = `SELECT * FROM usuarios WHERE "nombreDeUsuario" = $1`;
+    const { rows } = await pool.query(query, [nombreDeUsuario]);
+    return rows[0];
+  }
+

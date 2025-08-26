@@ -1,4 +1,15 @@
 {
+  "type": "module",
+  "name": "blend-vinos-backend",
+  "version": "1.0.0",
+  "description": "Backend de aplicación de stock con Express y PostgreSQL",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon index.js"
+  },
+  "author": "Tomas Esquivel",
+  "license": "ISC",
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",

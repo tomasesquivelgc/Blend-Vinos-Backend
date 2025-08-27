@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import db from "../db.js";
-import { getAllUsers } from "../models/userModel.js";
+import { getAllUsers, deleteUserById } from "../models/userModel.js";
 
 // map frontend English → DB Spanish
 const fieldMap = {
@@ -63,5 +63,27 @@ export const listUsers = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error fetching users" });
+  }
+};
+
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // prevent admins from deleting themselves if you want
+    if (parseInt(id) === req.user.id) {
+      return res.status(400).json({ message: "Admins cannot delete themselves" });
+    }
+
+    const deleted = await deleteUserById(id);
+
+    if (!deleted) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ message: "User deleted successfully", userId: deleted.id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error deleting user" });
   }
 };

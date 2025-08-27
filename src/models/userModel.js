@@ -48,3 +48,8 @@ export async function getAllUsers() {
   return rows;
 }
 
+export async function deleteUserById(id) {
+  const query = `DELETE FROM usuarios WHERE id = $1 RETURNING id;`;
+  const { rows } = await pool.query(query, [id]);
+  return rows[0]; // returns null if no user was deleted
+}

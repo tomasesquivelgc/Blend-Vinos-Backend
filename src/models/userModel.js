@@ -31,3 +31,20 @@ import pool from '../db.js';
     return rows[0];
   }
 
+
+export async function getAllUsers() {
+  const query = `
+    SELECT 
+      id, 
+      nombre AS name, 
+      rol_id AS roleId, 
+      email, 
+      nombreDeUsuario AS username, 
+      telefono AS phone
+    FROM usuarios
+    ORDER BY id;
+  `;
+  const { rows } = await pool.query(query);
+  return rows;
+}
+

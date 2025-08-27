@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import db from "../db.js";
+import { getAllUsers } from "../models/userModel.js";
 
 // map frontend English → DB Spanish
 const fieldMap = {
@@ -52,5 +53,15 @@ export const updateUser = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error updating user" });
+  }
+};
+
+export const listUsers = async (req, res) => {
+  try {
+    const users = await getAllUsers();
+    res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching users" });
   }
 };

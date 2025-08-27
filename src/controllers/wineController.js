@@ -32,7 +32,6 @@ export const getWine = async (req, res) => {
 
 // CREATE
 export const addWine = async (req, res) => {
-  console.log("Adding wine:", req.body);
   try {
     const newWine = await createWine(req.body);
     res.status(201).json(newWine);

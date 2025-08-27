@@ -5,6 +5,7 @@ import wineRoutes from './routes/wineRoutes.js';
 import { authenticate } from './middlewares/auth.js';
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());

@@ -19,7 +19,10 @@ export const registerMovement = async (req, res) => {
     const wine = rows[0];
 
     // Calculate cost
-    const costo = parseFloat(wine.costo) * quantity;
+    let costo = parseFloat(wine.costo) * quantity;
+    if (type === "BUY") {
+      costo = -costo;
+    }
 
     // Update stock
     let newTotal;

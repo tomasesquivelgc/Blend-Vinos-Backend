@@ -1,48 +1,58 @@
 import db from "../db.js";
+import { addHistory } from "../models/historyModel.js";
 
 export const registerMovement = async (req, res) => {
-  const { wineId, type, quantity } = req.body;
-
   try {
-    // Validate movement type
-    if (type !== "BUY" && type !== "SELL") {
+    const { wine_id, type, quantity, client_id = null, comment = null } = req.body;
+    const usuario_id = req.user.id; // <-- comes from JWT (set in authenticate middleware)
+
+    // Validate type
+    if (!["BUY", "SELL"].includes(type)) {
       return res.status(400).json({ error: "Invalid movement type" });
     }
 
-    // Get current total stock
-    const wineRes = await db.query("SELECT total FROM vinos WHERE id = $1", [wineId]);
-    if (wineRes.rows.length === 0) {
+    // Fetch wine
+    const { rows } = await db.query(`SELECT * FROM vinos WHERE id = $1`, [wine_id]);
+    if (rows.length === 0) {
       return res.status(404).json({ error: "Wine not found" });
     }
+    const wine = rows[0];
 
-    let total = wineRes.rows[0].total;
+    // Calculate cost
+    const costo = parseFloat(wine.costo) * quantity;
 
-    // Apply movement
+    // Update stock
+    let newTotal;
     if (type === "BUY") {
-      total += quantity;
-    } else if (type === "SELL") {
-      if (quantity > total) {
-        return res.status(400).json({ error: "Not enough stock to sell" });
+      newTotal = wine.total + quantity;
+    } else {
+      if (wine.total < quantity) {
+        return res.status(400).json({ error: "Not enough stock" });
       }
-      total -= quantity;
+      newTotal = wine.total - quantity;
     }
 
-    // Save movement in historial
-    await db.query(
-      `INSERT INTO historial (vino_id, accion, cantidad, fecha) 
-       VALUES ($1, $2, $3, NOW())`,
-      [wineId, type, quantity]
-    );
+    await db.query(`UPDATE vinos SET total = $1 WHERE id = $2`, [newTotal, wine_id]);
 
-    // Update wine stock (total)
-    await db.query("UPDATE vinos SET total = $1 WHERE id = $2", [total, wineId]);
+    // Add history record
+    const history = await addHistory({
+      vino_id: wine_id,
+      usuario_id,         // taken from token
+      cliente_id: client_id,
+      accion: type,
+      cantidad: quantity,
+      costo: costo,
+      comentario: comment,
+      vino_nombre: wine.nombre
+    });
 
-    res.json({ message: "Movement registered successfully", total });
+    res.status(201).json({ message: "Movement created successfully", history });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error registering movement" });
+    console.error("Error creating movement:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
+
 
 export const getMovements = async (req, res) => {
   try {

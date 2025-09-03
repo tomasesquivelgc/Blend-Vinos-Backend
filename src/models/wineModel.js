@@ -14,6 +14,18 @@ export async function getWineById(id) {
   return rows[0];
 }
 
+export async function getWineByCodigoDeBarras(codigoDeBarras) {
+  const query = `SELECT * FROM vinos WHERE codigoDeBarras = $1`;
+  const { rows } = await pool.query(query, [codigoDeBarras]);
+  return rows[0];
+}
+
+export async function getWineByCodigo(codigo) {
+  const query = `SELECT * FROM vinos WHERE codigo = $1`;
+  const { rows } = await pool.query(query, [codigo]);
+  return rows[0];
+}
+
 // CREATE wine
 export const createWine = async (wineData) => {
   const {

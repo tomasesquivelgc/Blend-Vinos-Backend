@@ -1,7 +1,7 @@
 import express from 'express';
 import { listWines, getWine } from '../controllers/wineController.js';
 import {authenticate, authorizeRoles} from "../middlewares/auth.js";
-import { addWine, editWine, removeWine } from '../controllers/wineController.js';
+import { addWine, editWine, removeWine, findWineByCode } from '../controllers/wineController.js';
 
 const router = express.Router();
 
@@ -20,7 +20,7 @@ router.put('/:id', authenticate, authorizeRoles(1), editWine);
 // DELETE /wines/:id → delete wine
 router.delete('/:id', authenticate, authorizeRoles(1), removeWine);
 
-// GET /wines/:id → single wine
-router.get('/:id', getWine);
+// GET /wines/find/:code → find wine by code
+router.get('/find/:code', findWineByCode);
 
 export default router;

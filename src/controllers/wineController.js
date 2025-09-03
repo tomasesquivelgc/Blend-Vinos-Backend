@@ -1,4 +1,4 @@
-import { getAllWines, getWineById, createWine, updateWine, deleteWine } from '../models/wineModel.js';
+import { getAllWines, getWineById, createWine, updateWine, deleteWine, getWineByCodigo, getWineByCodigoDeBarras } from '../models/wineModel.js';
 import { addHistory } from '../models/historyModel.js';
 
 export const listWines = async (req, res) => {
@@ -99,5 +99,21 @@ export const removeWine = async (req, res) => {
     res.json({ message: "Wine deleted", wine: deletedWine });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// FIND BY CODE
+
+export const findWineByCode = async (req, res) => {
+  try {
+    const { code } = req.params;
+    //if codigo is only numbers, then use getWineByCodigoDeBarras else use getWineByCodigo
+    const wine = /^\d+$/.test(code) ? await getWineByCodigoDeBarras(code) : await getWineByCodigo(code);
+    if (!wine) return res.status(404).json({ message: "Wine not found" });
+    res.json(wine);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+    console.error(error);
+    throw error;
   }
 };

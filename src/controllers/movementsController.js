@@ -1,5 +1,6 @@
 import db from "../db.js";
 import { addHistory } from "../models/historyModel.js";
+import {getWineById} from "../models/wineModel.js";
 
 export const registerMovement = async (req, res) => {
   try {
@@ -12,11 +13,7 @@ export const registerMovement = async (req, res) => {
     }
 
     // Fetch wine
-    const { rows } = await db.query(`SELECT * FROM vinos WHERE id = $1`, [wine_id]);
-    if (rows.length === 0) {
-      return res.status(404).json({ error: "Wine not found" });
-    }
-    const wine = rows[0];
+    const wine = await getWineById(wine_id);
 
     // Calculate cost
     let costo = parseFloat(wine.costo) * quantity;

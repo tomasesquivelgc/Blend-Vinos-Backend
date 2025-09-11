@@ -1,12 +1,15 @@
 import express from 'express';
 import { listWines, getWine } from '../controllers/wineController.js';
 import {authenticate, authorizeRoles} from "../middlewares/auth.js";
-import { addWine, editWine, removeWine, findWineByCode } from '../controllers/wineController.js';
+import { addWine, editWine, removeWine, findWineByCode, listWinesPaginated } from '../controllers/wineController.js';
 
 const router = express.Router();
 
 // GET /wines → all wines
 router.get('/', listWines);
+
+// GET /wines/paginated → all wines paginated
+router.get('/paginated', listWinesPaginated);
 
 // GET /wines/:id → single wine
 router.get('/:id', getWine);

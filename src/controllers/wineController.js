@@ -1,4 +1,4 @@
-import { getAllWines, getWineById, createWine, updateWine, deleteWine, getWineByCodigo, getWineByCodigoDeBarras } from '../models/wineModel.js';
+import { getAllWines, getWineById, createWine, updateWine, deleteWine, getWineByCodigo, getWineByCodigoDeBarras, getAllWinesPaginated } from '../models/wineModel.js';
 import { addHistory } from '../models/historyModel.js';
 
 export const listWines = async (req, res) => {
@@ -17,6 +17,21 @@ export const listWines = async (req, res) => {
     res.json(adjustedWines);
   } catch (error) {
     res.status(500).json({ error: error.message, message: "Error al obtener vinos" });
+  }
+};
+
+export const listWinesPaginated = async (req, res) => {
+  try {
+    // Parse page and limit as integers, provide defaults if not present or invalid
+    const page = parseInt(req.query.page, 10) || 0;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const order = req.query.order;
+    const orderBy = req.query.orderBy;
+    const wines = await getAllWinesPaginated(page, limit, order, orderBy);
+    res.json(wines);
+  } catch (error) {
+    res.status(500).json({ error: error.message, message: "Error al obtener vinos" });
+    throw error;
   }
 };
 

@@ -7,6 +7,23 @@ export async function getAllWines() {
   return rows;
 }
 
+// Get all wines paginated and ordered by nombre, cepa, anejamiento, bodega, distribuidor, estilo in ASC or DESC
+export async function getAllWinesPaginated(page, limit, order, orderBy) {
+  // Ensure page and limit are numbers and have defaults
+  const pageNum = Number.isInteger(page) && page >= 0 ? page : 0;
+  const limitNum = Number.isInteger(limit) && limit > 0 ? limit : 10;
+
+  // Set default values for order and orderBy
+  const validOrders = ["ASC", "DESC"];
+  const sortOrder = validOrders.includes((order || "").toUpperCase()) ? order.toUpperCase() : "ASC";
+  const allowedColumns = ["nombre", "cepa", "anejamiento", "bodega", "distribuidor", "estilo", "costo"];
+  const sortBy = allowedColumns.includes(orderBy) ? orderBy : "nombre";
+
+  const query = `SELECT * FROM vinos ORDER BY ${sortBy} ${sortOrder} LIMIT $1 OFFSET $2`;
+  const { rows } = await pool.query(query, [limitNum, pageNum * limitNum]);
+  return rows;
+}
+
 // Get wine by ID
 export async function getWineById(id) {
   const query = `SELECT * FROM vinos WHERE id = $1`;

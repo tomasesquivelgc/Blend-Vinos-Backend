@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { createUser, findUserByEmail } from '../models/userModel.js';
+import { createUser, findUserByNombreDeUsuario, findUserByEmail } from '../models/userModel.js';
 
 export const register = async (req, res) => {
   try {
@@ -8,8 +8,14 @@ export const register = async (req, res) => {
     const { name, roleId, email, password, username, phone } = req.body;
 
     // Check if user already exists
-    const userExists = await findUserByEmail(email);
-    if (userExists) return res.status(400).json({ message: "El usuario ya existe" });
+    const userByUsername = await findUserByNombreDeUsuario(username);
+    if (userByUsername) {
+        return res.status(400).json({ message: "El nombre de usuario ya está en uso" });
+    }
+    const userByEmail = await findUserByEmail(email);
+    if (userByEmail) {
+        return res.status(400).json({ message: "El correo electrónico ya está en uso" });
+    }
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -35,9 +41,9 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    const user = await findUserByEmail(email);
+    const user = await findUserByNombreDeUsuario(username);
     if (!user) return res.status(400).json({ message: "Credenciales inválidas" });
 
     const isMatch = await bcrypt.compare(password, user.contrasena);

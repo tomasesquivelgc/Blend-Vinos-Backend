@@ -19,8 +19,8 @@ import pool from '../db.js';
     return rows[0];
   }
 
-  export async function findByNombreDeUsuario(nombreDeUsuario) {
-    const query = `SELECT * FROM usuarios WHERE "nombreDeUsuario" = $1`;
+  export async function findUserByNombreDeUsuario(nombreDeUsuario) {
+    const query = `SELECT * FROM usuarios WHERE "nombredeusuario" = $1`;
     const { rows } = await pool.query(query, [nombreDeUsuario]);
     return rows[0];
   }

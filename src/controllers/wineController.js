@@ -16,7 +16,7 @@ export const listWines = async (req, res) => {
 
     res.json(adjustedWines);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, message: "Error al obtener vinos" });
   }
 };
 
@@ -24,7 +24,7 @@ export const getWine = async (req, res) => {
   try {
     const { id } = req.params;
     const wine = await getWineById(id);
-    if (!wine) return res.status(404).json({ message: "Wine not found" });
+    if (!wine) return res.status(404).json({ message: "Vino no encontrado" });
     res.json(wine);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -40,16 +40,16 @@ export const addWine = async (req, res) => {
     await addHistory({
       vino_id: newWine.id,
       usuario_id: req.user.id,
-      accion: "CREATE",
+      accion: "CREAR",
       cantidad: req.body.cantidad,
       costo: req.body.costo,
-      comentario: "Wine created",
+      comentario: "Vino creado",
       vino_nombre: newWine.nombre
     });
 
     res.status(201).json(newWine);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, message: "Error al crear vino" });
   }
 };
 
@@ -58,22 +58,22 @@ export const editWine = async (req, res) => {
   try {
     const { id } = req.params;
     const updatedWine = await updateWine(id, req.body);
-    if (!updatedWine) return res.status(404).json({ message: "Wine not found" });
+    if (!updatedWine) return res.status(404).json({ message: "Vino no encontrado" });
 
     // Log history
     await addHistory({
       vino_id: id,
       usuario_id: req.user.id,
-      accion: "UPDATE",
+      accion: "ACTUALIZAR",
       cantidad: req.body.cantidad,
       costo: req.body.costo,
-      comentario: "Wine updated",
+      comentario: "Vino actualizado",
       vino_nombre: updatedWine.nombre
     });
 
     res.json(updatedWine);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, message: "Error al actualizar vino" });
   }
 };
 
@@ -82,23 +82,23 @@ export const removeWine = async (req, res) => {
   try {
     const { id } = req.params;
     const deletedWine = await deleteWine(id);
-    if (!deletedWine) return res.status(404).json({ message: "Wine not found" });
+    if (!deletedWine) return res.status(404).json({ message: "Vino no encontrado" });
 
     // Log history
     await addHistory({
       vino_id: null,
       usuario_id: req.user.id,
-      accion: "DELETE",
+      accion: "ELIMINAR",
       cantidad: deletedWine.cantidad,
       costo: deletedWine.costo,
-      comentario: "Wine deleted",
+      comentario: "Vino eliminado",
       vino_nombre: deletedWine.nombre
 
     });
 
-    res.json({ message: "Wine deleted", wine: deletedWine });
+    res.json({ message: "Vino eliminado exitosamente", wine: deletedWine });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, message: "Error al eliminar vino" });
   }
 };
 
@@ -109,10 +109,10 @@ export const findWineByCode = async (req, res) => {
     const { code } = req.params;
     //if codigo is only numbers, then use getWineByCodigoDeBarras else use getWineByCodigo
     const wine = /^\d+$/.test(code) ? await getWineByCodigoDeBarras(code) : await getWineByCodigo(code);
-    if (!wine) return res.status(404).json({ message: "Wine not found" });
+    if (!wine) return res.status(404).json({ message: "Vino no encontrado" });
     res.json(wine);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, message: "Error al obtener vino" });
     console.error(error);
     throw error;
   }

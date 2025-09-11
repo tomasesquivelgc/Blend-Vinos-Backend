@@ -8,8 +8,8 @@ export const registerMovement = async (req, res) => {
     const usuario_id = req.user.id; // <-- comes from JWT (set in authenticate middleware)
 
     // Validate type
-    if (!["BUY", "SELL"].includes(type)) {
-      return res.status(400).json({ error: "Invalid movement type" });
+    if (!["COMPRA", "VENTA"].includes(type)) {
+      return res.status(400).json({ error: "Tipo de transacción inválido" });
     }
 
     // Fetch wine
@@ -17,28 +17,25 @@ export const registerMovement = async (req, res) => {
 
     // Calculate cost
     let costo = parseFloat(wine.costo) * quantity;
-    if (type === "BUY") {
-      costo = -costo;
-    }
 
     // Update stock
     let newTotal;
-    if (type === "BUY") {
+    if (type === "COMPRA") {
       newTotal = wine.total + quantity;
     } else {
       if (wine.total < quantity) {
-        return res.status(400).json({ error: "Not enough stock" });
+        return res.status(400).json({ error: "No hay suficiente stock disponible" });
       }
       newTotal = wine.total - quantity;
     }
 
     // Update stockReal
     let newTotalReal;
-    if (type === "BUY") {
+    if (type === "COMPRA") {
       newTotalReal = wine.stockreal + quantity;
     } else {
       if (wine.stockreal < quantity) {
-        return res.status(400).json({ error: "Not enough real stock" });
+        return res.status(400).json({ error: "No hay suficiente stock real disponible" });
       }
       newTotalReal = wine.stockreal - quantity;
     }
@@ -58,10 +55,10 @@ export const registerMovement = async (req, res) => {
       vino_nombre: wine.nombre
     });
 
-    res.status(201).json({ message: "Movement created successfully", history });
+    res.status(201).json({ message: "Transacción creada exitosamente", history });
   } catch (error) {
     console.error("Error creating movement:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Error al crear transacción" });
   }
 };
 
@@ -71,8 +68,8 @@ export const registerRealStockMovement = async (req, res) => {
     const usuario_id = req.user.id;
 
     // Validate type
-    if (!["ADD", "REMOVE"].includes(type)) {
-      return res.status(400).json({ error: "Invalid movement type" });
+    if (!["AGREGAR", "REMOVER"].includes(type)) {
+      return res.status(400).json({ error: "Tipo de transacción inválido" });
     }
 
     // Fetch wine
@@ -80,13 +77,10 @@ export const registerRealStockMovement = async (req, res) => {
 
     // Calculate cost
     let costo = parseFloat(wine.costo) * quantity;
-    if (type === "REMOVE") {
-      costo = -costo;
-    }
 
     // Update realStock
     let newTotalStock;
-    if (type === "ADD") {
+    if (type === "AGREGAR") {
       newTotalStock = wine.stockreal + quantity;
     } else {
       newTotalStock = wine.stockreal - quantity;
@@ -105,10 +99,10 @@ export const registerRealStockMovement = async (req, res) => {
       vino_nombre: wine.nombre
     });
 
-    res.status(201).json({ message: "Real stock movement created successfully", history });
+    res.status(201).json({ message: "Transacción de stock real creada exitosamente", history });
   } catch (error) {
     console.error("Error creating real stock movement:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Error al crear transacción de stock real" });
   }
 };
 
@@ -118,6 +112,6 @@ export const getMovements = async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Error fetching movements" });
+    res.status(500).json({ error: "Error al obtener transacciones" });
   }
 };

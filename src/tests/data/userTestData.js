@@ -17,7 +17,7 @@ export const usersData = [
   },
   {
     nombre: 'Charlie',
-    rol_id: 1,
+    rol_id: 3,
     email: 'charlie@example.com',
     contrasena: 'password789',
     nombreDeUsuario: 'charlieuser',

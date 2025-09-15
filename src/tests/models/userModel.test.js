@@ -5,9 +5,9 @@ import {
   findUserById,
   getAllUsers,
   deleteUserById
-} from '../models/userModel.js';
-import { usersData } from './userTestData.js';
-import pool from '../db.js';
+} from '../../models/userModel.js';
+import { usersData } from '../data/userTestData.js';
+import pool from '../../db.js';
 
 describe('userModel', () => {
   let testUser, testUser2, testUser3;

@@ -1,6 +1,6 @@
-import { addHistory } from '../models/historyModel.js';
-import { historyData } from './historyTestData.js';
-import pool from '../db.js';
+import { addHistory } from '../../models/historyModel.js';
+import { historyData } from '../data/historyTestData.js';
+import pool from '../../db.js';
 
 describe('historyModel', () => {
   let testHistory1, testHistory2, testHistory3;

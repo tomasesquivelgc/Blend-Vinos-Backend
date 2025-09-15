@@ -7,9 +7,9 @@ import {
   createWine,
   updateWine,
   deleteWine
-} from '../models/wineModel.js';
-import { winesData } from './wineTestData.js';
-import pool from '../db.js';
+} from '../../models/wineModel.js';
+import { winesData } from '../data/wineTestData.js';
+import pool from '../../db.js';
 
 describe('wineModel', () => {
   let testWine;

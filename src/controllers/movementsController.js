@@ -115,3 +115,35 @@ export const getMovements = async (req, res) => {
     res.status(500).json({ error: "Error al obtener transacciones" });
   }
 };
+
+export const getMovementsByMonth = async (req, res) => {
+  try {
+    const now = new Date();
+    const { month = now.getMonth() + 1, year = now.getFullYear() } = req.query || {};
+
+    const parsedMonth = parseInt(month, 10);
+    const parsedYear = parseInt(year, 10);
+
+    if (isNaN(parsedMonth) || parsedMonth < 1 || parsedMonth > 12) {
+      return res.status(400).json({ error: "Mes inválido. Debe ser 1-12" });
+    }
+    if (isNaN(parsedYear) || parsedYear < 1900 || parsedYear > 3000) {
+      return res.status(400).json({ error: "Año inválido" });
+    }
+
+    const query = `
+      SELECT *
+      FROM historial
+      WHERE EXTRACT(YEAR FROM fecha) = $1
+        AND EXTRACT(MONTH FROM fecha) = $2
+      ORDER BY fecha DESC
+    `;
+    const result = await db.query(query, [parsedYear, parsedMonth]);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al obtener transacciones por mes" });
+  }
+};
+

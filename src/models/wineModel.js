@@ -43,6 +43,12 @@ export async function getWineByCodigo(codigo) {
   return rows[0];
 }
 
+export async function getWineByNombre(nombre) {
+  const query = `SELECT * FROM vinos WHERE LOWER(nombre) = LOWER($1)`;
+  const { rows } = await pool.query(query, [nombre]);
+  return rows;
+}
+
 // CREATE wine
 export const createWine = async (wineData) => {
   const {

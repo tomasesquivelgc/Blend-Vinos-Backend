@@ -16,7 +16,7 @@ export async function getAllWinesPaginated(page, limit, order, orderBy) {
   // Set default values for order and orderBy
   const validOrders = ["ASC", "DESC"];
   const sortOrder = validOrders.includes((order || "").toUpperCase()) ? order.toUpperCase() : "ASC";
-  const allowedColumns = ["nombre", "cepa", "anejamiento", "bodega", "distribuidor", "estilo", "costo"];
+  const allowedColumns = ["nombre", "cepa", "anejamiento", "bodega", "distribuidor", "estilo", "costo", "total"];
   const sortBy = allowedColumns.includes(orderBy) ? orderBy : "nombre";
 
   const query = `SELECT * FROM vinos ORDER BY ${sortBy} ${sortOrder} LIMIT $1 OFFSET $2`;

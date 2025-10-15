@@ -1,4 +1,4 @@
-import { getAllWines, getWineById, createWine, updateWine, deleteWine, getWineByCodigo, getWineByCodigoDeBarras, getAllWinesPaginated, getWineByNombre } from '../models/wineModel.js';
+import { getAllWines, getWineById, createWine, updateWine, deleteWine, getWineByCodigo, getWineByCodigoDeBarras, getAllWinesPaginated, getWineByNombrePartial } from '../models/wineModel.js';
 import { addHistory } from '../models/historyModel.js';
 
 export const listWines = async (req, res) => {
@@ -122,19 +122,35 @@ export const removeWine = async (req, res) => {
 export const findWineByCode = async (req, res) => {
   try {
     const { code } = req.params;
-    // if codigo is only numbers, then use getWineByCodigoDeBarras else use getWineByCodigo
-    let wine = /^\d+$/.test(code) ? await getWineByCodigoDeBarras(code) : await getWineByCodigo(code);
-    if (!wine) {
-      const wines = await getWineByNombre(code);
-      if (!wines || wines.length === 0) {
-        return res.status(404).json({ message: "Vino no encontrado" });
-      }
-      return res.json(wines);
+    let wines = [];
+
+    // If code is only numbers, search by barcode
+    if (/^\d+$/.test(code)) {
+      const wine = await getWineByCodigoDeBarras(code);
+      if (wine) wines.push(wine);
+    } else {
+      // Search by alphanumeric code
+      const wine = await getWineByCodigo(code);
+      if (wine) wines.push(wine);
     }
-    res.json(wine);
+
+    // Always search by name (partial, case-insensitive)
+    const nameMatches = await getWineByNombrePartial(code);
+    if (nameMatches && nameMatches.length > 0) {
+      // Merge results but avoid duplicates
+      const existingIds = new Set(wines.map(w => w.id));
+      nameMatches.forEach(w => {
+        if (!existingIds.has(w.id)) wines.push(w);
+      });
+    }
+
+    if (wines.length === 0) {
+      return res.status(404).json({ message: "Vino no encontrado" });
+    }
+
+    res.json(wines);
   } catch (error) {
-    res.status(500).json({ error: error.message, message: "Error al obtener vino" });
     console.error(error);
-    throw error;
+    res.status(500).json({ error: error.message, message: "Error al obtener vino" });
   }
 };

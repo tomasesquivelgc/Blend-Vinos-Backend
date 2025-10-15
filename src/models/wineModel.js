@@ -109,3 +109,12 @@ export const deleteWine = async (id) => {
   const result = await pool.query('DELETE FROM vinos WHERE id=$1 RETURNING *', [id]);
   return result.rows[0];
 };
+
+export async function getWineByNombrePartial(name) {
+  const query = `
+    SELECT * FROM vinos 
+    WHERE LOWER(nombre) LIKE LOWER($1)
+  `;
+  const { rows } = await pool.query(query, [`%${name}%`]);
+  return rows;
+}

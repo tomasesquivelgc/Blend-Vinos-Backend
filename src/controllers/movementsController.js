@@ -157,10 +157,10 @@ export const getTopSoldWines = async (req, res) => {
         SUM(costo) AS total_dinero
       FROM historial
       WHERE accion ILIKE 'VENTA'
-        AND fecha >= date_trunc('month', CURRENT_DATE - interval '1 month')
-        AND fecha < date_trunc('month', CURRENT_DATE)
+        AND fecha >= date_trunc('month', CURRENT_DATE)
+        AND fecha < date_trunc('month', CURRENT_DATE + interval '1 month')
       GROUP BY TRIM(LOWER(vino_nombre))
-      ORDER BY cantidad_ventas DESC, botellas_vendidas DESC
+      ORDER BY botellas_vendidas DESC, cantidad_ventas DESC
       LIMIT 5;
     `;
     const result = await db.query(query);

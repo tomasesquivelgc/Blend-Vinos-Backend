@@ -28,7 +28,16 @@ export const listWinesPaginated = async (req, res) => {
     const order = req.query.order;
     const orderBy = req.query.orderBy;
     const wines = await getAllWinesPaginated(page, limit, order, orderBy);
-    res.json(wines);
+    // Apply same role-based price adjustment as listWines
+    const adjustedWines = wines.map(wine => {
+      let precio = parseFloat(wine.costo);
+
+      if (req.user.rol_id === 2) precio *= 1.05;   // Socio
+      else if (req.user.rol_id === 3) precio *= 1.20; // Revendedor
+
+      return { ...wine, costo: precio.toFixed(2) };
+    });
+    res.json(adjustedWines);
   } catch (error) {
     res.status(500).json({ error: error.message, message: "Error al obtener vinos" });
     throw error;

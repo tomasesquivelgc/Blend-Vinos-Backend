@@ -102,3 +102,37 @@ export const getUserFromToken = async (req, res) => {
     res.status(500).json({ message: "Error al obtener datos del usuario" });
   }
 };
+
+export const resetUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // default password to reset to
+    const defaultPassword = "Contraseña123";
+
+    // hash the default password
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+    // update query
+    const sql = `
+      UPDATE usuarios
+      SET contrasena = $1
+      WHERE id = $2
+      RETURNING id, nombre, email, nombreDeUsuario;
+    `;
+
+    const result = await db.query(sql, [hashedPassword, id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    res.json({
+      message: "Contraseña restablecida correctamente",
+      user: result.rows[0],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error al restablecer la contraseña" });
+  }
+};

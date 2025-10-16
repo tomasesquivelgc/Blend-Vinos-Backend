@@ -79,3 +79,26 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: "Error al eliminar usuario" });
   }
 };
+
+export const getUserFromToken = async (req, res) => {
+  try {
+    // The middleware already validated and decoded the token
+    const userId = req.user.id;
+
+    const sql = `
+      SELECT id, nombre, email, nombreDeUsuario, telefono, rol_id AS roleId
+      FROM usuarios
+      WHERE id = $1
+    `;
+    const result = await db.query(sql, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error al obtener datos del usuario" });
+  }
+};

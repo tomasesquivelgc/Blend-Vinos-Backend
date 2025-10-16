@@ -4,14 +4,23 @@ import { addHistory } from '../models/historyModel.js';
 export const listWines = async (req, res) => {
   try {
     const wines = await getAllWines();
+
     const adjustedWines = wines.map(wine => {
-      let precio = parseFloat(wine.costo);
+      const costoOriginal = parseFloat(wine.costo);
+      let precio = costoOriginal;
 
       // Ajuste según rol
-      if (req.user.rol_id === 2) precio *= 1.05;
-      else if (req.user.rol_id === 3) precio *= 1.20;
+      if (req.user.rol_id === 2) precio *= 1.05;      // Socio
+      else if (req.user.rol_id === 3) precio *= 1.20; // Revendedor
 
-      return { ...wine, costo: precio.toFixed(2) };
+      // Precio recomendado al público (siempre basado en el costo original)
+      const precioRecomendado = costoOriginal * 1.47;
+
+      return { 
+        ...wine, 
+        costo: precio.toFixed(2),
+        precio_recomendado: precioRecomendado.toFixed(2)
+      };
     });
 
     res.json(adjustedWines);
@@ -20,29 +29,39 @@ export const listWines = async (req, res) => {
   }
 };
 
+
 export const listWinesPaginated = async (req, res) => {
   try {
-    // Parse page and limit as integers, provide defaults if not present or invalid
     const page = parseInt(req.query.page, 10) || 0;
     const limit = parseInt(req.query.limit, 10) || 10;
     const order = req.query.order;
     const orderBy = req.query.orderBy;
-    const wines = await getAllWinesPaginated(page, limit, order, orderBy);
-    // Apply same role-based price adjustment as listWines
-    const adjustedWines = wines.map(wine => {
-      let precio = parseFloat(wine.costo);
 
-      if (req.user.rol_id === 2) precio *= 1.05;   // Socio
+    const wines = await getAllWinesPaginated(page, limit, order, orderBy);
+
+    const adjustedWines = wines.map(wine => {
+      const costoOriginal = parseFloat(wine.costo);
+      let precio = costoOriginal;
+
+      if (req.user.rol_id === 2) precio *= 1.05;      // Socio
       else if (req.user.rol_id === 3) precio *= 1.20; // Revendedor
 
-      return { ...wine, costo: precio.toFixed(2) };
+      const precioRecomendado = costoOriginal * 1.47;
+
+      return { 
+        ...wine, 
+        costo: precio.toFixed(2),
+        precioRecomendado: precioRecomendado.toFixed(2)
+      };
     });
+
     res.json(adjustedWines);
   } catch (error) {
     res.status(500).json({ error: error.message, message: "Error al obtener vinos" });
     throw error;
   }
 };
+
 
 export const getWine = async (req, res) => {
   try {

@@ -68,7 +68,20 @@ export const getWine = async (req, res) => {
     const { id } = req.params;
     const wine = await getWineById(id);
     if (!wine) return res.status(404).json({ message: "Vino no encontrado" });
-    res.json(wine);
+    // Ajuste de costo por rol y agregado de precio recomendado, igual que en listWinesPaginated
+    const costoOriginal = parseFloat(wine.costo);
+    let precio = costoOriginal;
+
+    if (req.user.rol_id === 2) precio *= 1.05;      // Socio
+    else if (req.user.rol_id === 3) precio *= 1.20; // Revendedor
+
+    const precioRecomendado = costoOriginal * 1.47;
+
+    res.json({
+      ...wine,
+      costo: precio.toFixed(2),
+      precioRecomendado: precioRecomendado.toFixed(2)
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -10,11 +10,11 @@ export const listWines = async (req, res) => {
       let precio = costoOriginal;
 
       // Ajuste según rol
-      if (req.user.rol_id === 2) precio *= 1.05;      // Socio
-      else if (req.user.rol_id === 3) precio *= 1.20; // Revendedor
+      if (req.user.rol_id === 2) precio *= 1.06;      // Socio
+      else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
 
       // Precio recomendado al público (siempre basado en el costo original)
-      const precioRecomendado = costoOriginal * 1.47;
+      const precioRecomendado = costoOriginal * 1.484;
 
       return { 
         ...wine, 
@@ -43,10 +43,10 @@ export const listWinesPaginated = async (req, res) => {
       const costoOriginal = parseFloat(wine.costo);
       let precio = costoOriginal;
 
-      if (req.user.rol_id === 2) precio *= 1.05;      // Socio
-      else if (req.user.rol_id === 3) precio *= 1.20; // Revendedor
+      if (req.user.rol_id === 2) precio *= 1.06;      // Socio
+      else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
 
-      const precioRecomendado = costoOriginal * 1.47;
+      const precioRecomendado = costoOriginal * 1.484;
 
       return { 
         ...wine, 
@@ -72,15 +72,15 @@ export const getWine = async (req, res) => {
     const costoOriginal = parseFloat(wine.costo);
     let precio = costoOriginal;
 
-    if (req.user.rol_id === 2) precio *= 1.05;      // Socio
-    else if (req.user.rol_id === 3) precio *= 1.20; // Revendedor
+    if (req.user.rol_id === 2) precio *= 1.06;      // Socio
+    else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
 
-    const precioRecomendado = costoOriginal * 1.47;
+    const precioRecomendado = costoOriginal * 1.484;
 
     res.json({
       ...wine,
       costo: precio.toFixed(2),
-      precioRecomendado: precioRecomendado.toFixed(2)
+      precioRecomendado: 32
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -189,7 +189,24 @@ export const findWineByCode = async (req, res) => {
       return res.status(404).json({ message: "Vino no encontrado" });
     }
 
-    res.json(wines);
+    // Apply price adjustments based on user role
+    const adjustedWines = wines.map(wine => {
+      const costoOriginal = parseFloat(wine.costo);
+      let precio = costoOriginal;
+
+      if (req.user.rol_id === 2) precio *= 1.06;      // Socio
+      else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
+
+      const precioRecomendado = costoOriginal * 1.484;
+
+      return {
+        ...wine,
+        costo: precio.toFixed(2),
+        precioRecomendado: precioRecomendado.toFixed(2)
+      };
+    });
+
+    res.json(adjustedWines);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message, message: "Error al obtener vino" });

@@ -4,7 +4,7 @@ import {getWineById} from "../models/wineModel.js";
 
 export const registerMovement = async (req, res) => {
   try {
-    const { wine_id, type, quantity, client_id = null, comment = null } = req.body;
+    const { wine_id, type, quantity, client_id = null, comment = null, nombre_de_cliente = null } = req.body;
     const usuario_id = req.user.id; // <-- comes from JWT (set in authenticate middleware)
 
     // Validate type
@@ -52,7 +52,8 @@ export const registerMovement = async (req, res) => {
       cantidad: quantity,
       costo: costo,
       comentario: comment,
-      vino_nombre: wine.nombre
+      vino_nombre: wine.nombre,
+      nombre_de_cliente: nombre_de_cliente
     });
 
     res.status(201).json({ message: "Transacción creada exitosamente", history });

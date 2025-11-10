@@ -11,7 +11,7 @@ export const updateUser = async (req, res) => {
       return res.status(403).json({ message: "No autorizado para modificar este usuario" });
     }
 
-    const campos = ["nombre", "email", "contrasena", "nombreDeUsuario", "telefono"];
+    const campos = ["nombre", "email", "contrasena", "nombredeusuario", "telefono"];
     const updates = {};
     for (const campo of campos) {
       if (req.body[campo]) {
@@ -36,7 +36,7 @@ export const updateUser = async (req, res) => {
       UPDATE usuarios
       SET ${fields.join(", ")}
       WHERE id = $${values.length}
-      RETURNING id, nombre, email, nombreDeUsuario, telefono, rol_id AS roleId
+      RETURNING id, nombre, email, nombredeusuario, telefono, rol_id AS roleId
     `;
 
     const result = await db.query(sql, values);
@@ -86,7 +86,7 @@ export const getUserFromToken = async (req, res) => {
     const userId = req.user.id;
 
     const sql = `
-      SELECT id, nombre, email, nombreDeUsuario, telefono, rol_id AS roleId
+      SELECT id, nombre, email, nombredeusuario, telefono, rol_id AS roleId
       FROM usuarios
       WHERE id = $1
     `;
@@ -118,7 +118,7 @@ export const resetUserPassword = async (req, res) => {
       UPDATE usuarios
       SET contrasena = $1
       WHERE id = $2
-      RETURNING id, nombre, email, nombreDeUsuario;
+      RETURNING id, nombre, email, nombredeusuario;
     `;
 
     const result = await db.query(sql, [hashedPassword, id]);

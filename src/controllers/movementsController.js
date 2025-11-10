@@ -1,10 +1,11 @@
 import db from "../db.js";
 import { addHistory } from "../models/historyModel.js";
 import {getWineById} from "../models/wineModel.js";
+import { findUserById } from "../models/userModel.js";
 
 export const registerMovement = async (req, res) => {
   try {
-    const { wine_id, type, quantity, client_id = null, comment = null } = req.body;
+    const { wine_id, type, quantity, client_id = null, comment = null, nombre_de_cliente = null } = req.body;
     const usuario_id = req.user.id; // <-- comes from JWT (set in authenticate middleware)
 
     // Validate type
@@ -15,8 +16,22 @@ export const registerMovement = async (req, res) => {
     // Fetch wine
     const wine = await getWineById(wine_id);
 
-    // Calculate cost
-    let costo = parseFloat(wine.costo) * quantity;
+    // Determine unit price taking into account the client's role (if any)
+    let unitPrice = parseFloat(wine.costo);
+    if (client_id) {
+      // Validate client exists and get their role
+      const client = await findUserById(client_id);
+      if (!client) {
+        return res.status(400).json({ error: "Cliente no encontrado" });
+      }
+
+      // Apply role-based adjustments to the unit price
+      if (client.rol_id === 2) unitPrice *= 1.06;      // Socio
+      else if (client.rol_id === 3) unitPrice *= 1.22; // Revendedor
+    }
+
+    // Calculate total cost for the movement
+    let costo = unitPrice * quantity;
 
     // Update stock
     let newTotal;
@@ -52,7 +67,8 @@ export const registerMovement = async (req, res) => {
       cantidad: quantity,
       costo: costo,
       comentario: comment,
-      vino_nombre: wine.nombre
+      vino_nombre: wine.nombre,
+      nombre_de_cliente: nombre_de_cliente
     });
 
     res.status(201).json({ message: "Transacción creada exitosamente", history });

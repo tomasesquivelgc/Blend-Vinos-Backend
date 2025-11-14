@@ -14,7 +14,7 @@ export const listWines = async (req, res) => {
       else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
 
       // Precio recomendado al público (siempre basado en el costo original)
-      const precioRecomendado = costoOriginal * 1.484;
+      const precioRecomendado = costoOriginal * 1.7;
 
       return { 
         ...wine, 
@@ -46,7 +46,7 @@ export const listWinesPaginated = async (req, res) => {
       if (req.user.rol_id === 2) precio *= 1.06;      // Socio
       else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
 
-      const precioRecomendado = costoOriginal * 1.484;
+      const precioRecomendado = costoOriginal * 1.7;
 
       return { 
         ...wine, 
@@ -75,12 +75,12 @@ export const getWine = async (req, res) => {
     if (req.user.rol_id === 2) precio *= 1.06;      // Socio
     else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
 
-    const precioRecomendado = costoOriginal * 1.484;
+    const precioRecomendado = costoOriginal * 1.7;
 
     res.json({
       ...wine,
       costo: precio.toFixed(2),
-      precioRecomendado: 32
+      precioRecomendado: precioRecomendado.toFixed(2)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -197,7 +197,7 @@ export const findWineByCode = async (req, res) => {
       if (req.user.rol_id === 2) precio *= 1.06;      // Socio
       else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
 
-      const precioRecomendado = costoOriginal * 1.484;
+      const precioRecomendado = costoOriginal * 1.7;
 
       return {
         ...wine,

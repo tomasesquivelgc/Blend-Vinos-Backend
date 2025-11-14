@@ -12,6 +12,7 @@ export const listWines = async (req, res) => {
       // Ajuste según rol
       if (req.user.rol_id === 2) precio *= 1.06;      // Socio
       else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
+      else if (req.user.rol_id === 4) precio *= 1.1;  // Distribuidor
 
       // Precio recomendado al público (siempre basado en el costo original)
       const precioRecomendado = costoOriginal * 1.7;
@@ -45,6 +46,7 @@ export const listWinesPaginated = async (req, res) => {
 
       if (req.user.rol_id === 2) precio *= 1.06;      // Socio
       else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
+      else if (req.user.rol_id === 4) precio *= 1.1;  // Distribuidor
 
       const precioRecomendado = costoOriginal * 1.7;
 
@@ -74,6 +76,7 @@ export const getWine = async (req, res) => {
 
     if (req.user.rol_id === 2) precio *= 1.06;      // Socio
     else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
+    else if (req.user.rol_id === 4) precio *= 1.1;  // Distribuidor
 
     const precioRecomendado = costoOriginal * 1.7;
 
@@ -196,6 +199,7 @@ export const findWineByCode = async (req, res) => {
 
       if (req.user.rol_id === 2) precio *= 1.06;      // Socio
       else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
+      else if (req.user.rol_id === 4) precio *= 1.1;  // Distribuidor
 
       const precioRecomendado = costoOriginal * 1.7;
 

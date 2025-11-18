@@ -1,11 +1,11 @@
 import db from "../db.js";
 import { addHistory } from "../models/historyModel.js";
-import {getWineById} from "../models/wineModel.js";
+import {getWineByCodigo} from "../models/wineModel.js";
 import { findUserById } from "../models/userModel.js";
 
 export const registerMovement = async (req, res) => {
   try {
-    const { wine_id, type, quantity, client_id = null, comment = null, nombre_de_cliente = null } = req.body;
+    const { wine_code, type, quantity, client_id = null, comment = null, nombre_de_cliente = null } = req.body;
     const usuario_id = req.user.id; // <-- comes from JWT (set in authenticate middleware)
 
     // Validate type
@@ -14,7 +14,11 @@ export const registerMovement = async (req, res) => {
     }
 
     // Fetch wine
-    const wine = await getWineById(wine_id);
+    const wine = await getWineByCodigo(wine_code);
+    const wine_id = wine.id;
+    if (!wine) {
+      return res.status(400).json({ error: "Vino no encontrado" });
+    }
 
     // Determine unit price taking into account the client's role (if any)
     let unitPrice = parseFloat(wine.costo);
@@ -44,19 +48,8 @@ export const registerMovement = async (req, res) => {
       newTotal = wine.total - quantity;
     }
 
-    // Update stockReal
-    let newTotalReal;
-    if (type === "COMPRA") {
-      newTotalReal = wine.stockreal + quantity;
-    } else {
-      if (wine.stockreal < quantity) {
-        return res.status(400).json({ error: "No hay suficiente stock real disponible" });
-      }
-      newTotalReal = wine.stockreal - quantity;
-    }
 
     await db.query(`UPDATE vinos SET total = $1 WHERE id = $2`, [newTotal, wine_id]);
-    await db.query(`UPDATE vinos SET stockreal = $1 WHERE id = $2`, [newTotalReal, wine_id]);
 
     // Add history record
     const history = await addHistory({

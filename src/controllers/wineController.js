@@ -1,4 +1,4 @@
-import { getAllWines, getWineById, createWine, updateWine, deleteWine, getWineByCodigo, getWineByCodigoDeBarras, getAllWinesPaginated, getWineByNombrePartial } from '../models/wineModel.js';
+import { getAllWines, getWineById, createWine, updateWine, deleteWine, getWineByCodigo, getWineByCodigoDeBarras, getAllWinesPaginated, getWineByNombrePartial, getWineByCepa } from '../models/wineModel.js';
 import { addHistory } from '../models/historyModel.js';
 
 export const listWines = async (req, res) => {
@@ -200,9 +200,12 @@ export const findWineByCode = async (req, res) => {
         if (!existingIds.has(w.id)) wines.push(w);
       });
     }
-
-    if (wines.length === 0) {
-      return res.status(404).json({ message: "Vino no encontrado" });
+    const cepaMatches = await getWineByCepa(code);
+    if (cepaMatches && cepaMatches.length > 0) {
+      const existingIds = new Set(wines.map(w => w.id));
+      cepaMatches.forEach(w => {
+        if (!existingIds.has(w.id)) wines.push(w);
+      });
     }
 
     // Apply price adjustments based on user role

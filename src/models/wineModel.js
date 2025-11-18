@@ -118,3 +118,12 @@ export async function getWineByNombrePartial(name) {
   const { rows } = await pool.query(query, [`%${name}%`]);
   return rows;
 }
+
+export async function getWineByCepa(cepa) {
+  const query = `
+    SELECT * FROM vinos
+    WHERE LOWER(cepa) LIKE LOWER($1)
+  `;
+  const { rows } = await pool.query(query, [`%${cepa}%`]);
+  return rows;
+}

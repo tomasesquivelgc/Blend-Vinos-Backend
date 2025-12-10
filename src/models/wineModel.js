@@ -127,3 +127,12 @@ export async function getWineByCepa(cepa) {
   const { rows } = await pool.query(query, [`%${cepa}%`]);
   return rows;
 }
+
+export async function getWineByAnejamiento(anejamiento) {
+  const query = `
+    SELECT * FROM vinos
+    WHERE LOWER(anejamiento) LIKE LOWER($1)
+  `;
+  const { rows } = await pool.query(query, [`%${anejamiento}%`]);
+  return rows;
+}

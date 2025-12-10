@@ -128,7 +128,7 @@ export const getMovements = async (req, res) => {
 export const getMovementsByMonth = async (req, res) => {
   try {
     const now = new Date();
-    const { month = now.getMonth() + 1, year = now.getFullYear() } = req.query || {};
+    const { month = now.getMonth() + 1, year = now.getFullYear(), accion } = req.query || {};
 
     const parsedMonth = parseInt(month, 10);
     const parsedYear = parseInt(year, 10);
@@ -140,14 +140,27 @@ export const getMovementsByMonth = async (req, res) => {
       return res.status(400).json({ error: "Año inválido" });
     }
 
+    const allowed = ['COMPRA','VENTA','CREAR','ACTUALIZAR','ELIMINAR'];
+    const params = [parsedYear, parsedMonth];
+    let whereExtra = '';
+    if (accion != null && String(accion).trim() !== '') {
+      const accionUpper = String(accion).toUpperCase();
+      if (!allowed.includes(accionUpper)) {
+        return res.status(400).json({ error: 'Tipo de movimiento inválido' });
+      }
+      whereExtra = ' AND accion = $3';
+      params.push(accionUpper);
+    }
+
     const query = `
       SELECT *
       FROM historial
       WHERE EXTRACT(YEAR FROM fecha) = $1
         AND EXTRACT(MONTH FROM fecha) = $2
+        ${whereExtra}
       ORDER BY fecha DESC
     `;
-    const result = await db.query(query, [parsedYear, parsedMonth]);
+    const result = await db.query(query, params);
 
     res.json(result.rows);
   } catch (error) {

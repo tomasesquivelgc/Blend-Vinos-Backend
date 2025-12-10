@@ -136,3 +136,12 @@ export async function getWineByAnejamiento(anejamiento) {
   const { rows } = await pool.query(query, [`%${anejamiento}%`]);
   return rows;
 }
+
+export async function getWineByEstilo(estilo) {
+  const query = `
+    SELECT * FROM vinos
+    WHERE LOWER(estilo) LIKE LOWER($1)
+  `;
+  const { rows } = await pool.query(query, [`%${estilo}%`]);
+  return rows;
+}

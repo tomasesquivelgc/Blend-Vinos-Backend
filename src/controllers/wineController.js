@@ -1,4 +1,4 @@
-import { getAllWines, getWineById, createWine, updateWine, deleteWine, getWineByCodigo, getWineByCodigoDeBarras, getAllWinesPaginated, getWineByNombrePartial, getWineByCepa, getWineByAnejamiento } from '../models/wineModel.js';
+import { getAllWines, getWineById, createWine, updateWine, deleteWine, getWineByCodigo, getWineByCodigoDeBarras, getAllWinesPaginated, getWineByNombrePartial, getWineByCepa, getWineByAnejamiento, getWineByEstilo } from '../models/wineModel.js';
 import { addHistory } from '../models/historyModel.js';
 
 export const listWines = async (req, res) => {
@@ -223,6 +223,13 @@ export const findWineByCode = async (req, res) => {
     if (anejamientoMatches && anejamientoMatches.length > 0) {
       const existingIds = new Set(wines.map(w => w.id));  
       anejamientoMatches.forEach(w => {
+        if (!existingIds.has(w.id)) wines.push(w);
+      });
+    }
+    const estiloMatches = await getWineByEstilo(code);
+    if (estiloMatches && estiloMatches.length > 0) {
+      const existingIds = new Set(wines.map(w => w.id));
+      estiloMatches.forEach(w => {
         if (!existingIds.has(w.id)) wines.push(w);
       });
     }

@@ -30,8 +30,10 @@ export const registerMovement = async (req, res) => {
       }
 
       // Apply role-based adjustments to the unit price
-      if (client.rol_id === 2) unitPrice *= 1.06;      // Socio
+      if (client.rol_id === 2) unitPrice *= 1.08;      // Socio
       else if (client.rol_id === 3) unitPrice *= 1.22; // Revendedor
+      else if (req.user.rol_id === 4) precio *= 1.15;  // Distribuidor
+      else if (req.user.rol_id === 5) precio *= 1.3; // Revendedor Socio
     }
 
     // Calculate total cost for the movement

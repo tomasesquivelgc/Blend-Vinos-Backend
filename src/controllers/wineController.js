@@ -10,15 +10,15 @@ export const listWines = async (req, res) => {
       let precio = costoOriginal;
 
       // Ajuste según rol
-      if (req.user.rol_id === 2) precio *= 1.06;      // Socio
-      else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
-      else if (req.user.rol_id === 4) precio *= 1.1;  // Distribuidor
+      if (req.user.rol_id === 2) precio *= 1.08;      // Socio
+      else if (req.user.rol_id === 3) precio *= 1.23; // Revendedor
+      else if (req.user.rol_id === 4) precio *= 1.15;  // Distribuidor
       else if (req.user.rol_id === 5) precio *= 1.3; // Revendedor Socio
 
       // Precio recomendado al público (siempre basado en el costo original)
-      const precioRecomendado = costoOriginal * 1.7;
+      const precioRecomendado = costoOriginal * 1.78;
       // Precio de oferta al público
-      const precioOferta = costoOriginal * 1.4;
+      const precioOferta = costoOriginal * 1.48;
       return { 
         ...wine, 
         costo: precio.toFixed(2),
@@ -47,17 +47,17 @@ export const listWinesPaginated = async (req, res) => {
       const costoOriginal = parseFloat(wine.costo);
       let precio = costoOriginal;
 
-      if (req.user.rol_id === 2) precio *= 1.06;      // Socio
-      else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
-      else if (req.user.rol_id === 4) precio *= 1.1;  // Distribuidor
+      if (req.user.rol_id === 2) precio *= 1.08;      // Socio
+      else if (req.user.rol_id === 3) precio *= 1.23; // Revendedor
+      else if (req.user.rol_id === 4) precio *= 1.15;  // Distribuidor
       else if (req.user.rol_id === 5) precio *= 1.3; // Revendedor Socio
 
-      const precioSocio = costoOriginal * 1.06;
-      const precioRevendedor = costoOriginal * 1.22;
-      const precioDistribuidor = costoOriginal * 1.1;
+      const precioSocio = costoOriginal * 1.08;
+      const precioRevendedor = costoOriginal * 1.23;
+      const precioDistribuidor = costoOriginal * 1.15;
       const precioRevendedorSocio = costoOriginal * 1.3;
-      const precioRecomendado = costoOriginal * 1.7;
-      const precioOferta = costoOriginal * 1.4;
+      const precioRecomendado = costoOriginal * 1.78;
+      const precioOferta = costoOriginal * 1.48;
 
       return { 
         ...wine, 
@@ -88,16 +88,16 @@ export const getWine = async (req, res) => {
     const costoOriginal = parseFloat(wine.costo);
     let precio = costoOriginal;
 
-    if (req.user.rol_id === 2) precio *= 1.06;      // Socio
-    else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
-    else if (req.user.rol_id === 4) precio *= 1.1;  // Distribuidor
+    if (req.user.rol_id === 2) precio *= 1.08;      // Socio
+    else if (req.user.rol_id === 3) precio *= 1.23; // Revendedor
+    else if (req.user.rol_id === 4) precio *= 1.15;  // Distribuidor
     else if (req.user.rol_id === 5) precio *= 1.3; // Revendedor Socio
 
     const precioSocio = costoOriginal * 1.06;
-    const precioRevendedor = costoOriginal * 1.22;
-    const precioDistribuidor = costoOriginal * 1.1;
-    const precioRecomendado = costoOriginal * 1.7;
-    const precioOferta = costoOriginal * 1.4;
+    const precioRevendedor = costoOriginal * 1.23;
+    const precioDistribuidor = costoOriginal * 1.15;
+    const precioRecomendado = costoOriginal * 1.78;
+    const precioOferta = costoOriginal * 1.48;
     const precioRevendedorSocio = costoOriginal * 1.3;
 
     res.json({
@@ -239,17 +239,17 @@ export const findWineByCode = async (req, res) => {
       const costoOriginal = parseFloat(wine.costo);
       let precio = costoOriginal;
 
-      if (req.user.rol_id === 2) precio *= 1.06;      // Socio
-      else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
-      else if (req.user.rol_id === 4) precio *= 1.1;  // Distribuidor
+      if (req.user.rol_id === 2) precio *= 1.08;      // Socio
+      else if (req.user.rol_id === 3) precio *= 1.23; // Revendedor
+      else if (req.user.rol_id === 4) precio *= 1.15;  // Distribuidor
       else if (req.user.rol_id === 5) precio *= 1.3; // Revendedor Socio
       const precioSocio = costoOriginal * 1.06;
-      const precioRevendedor = costoOriginal * 1.22;
-      const precioDistribuidor = costoOriginal * 1.1;
+      const precioRevendedor = costoOriginal * 1.23;
+      const precioDistribuidor = costoOriginal * 1.15;
       const precioRevendedorSocio = costoOriginal * 1.3;
-      const precioOferta = costoOriginal * 1.4;
+      const precioOferta = costoOriginal * 1.48;
 
-      const precioRecomendado = costoOriginal * 1.7;
+      const precioRecomendado = costoOriginal * 1.78;
 
       return {
         ...wine,

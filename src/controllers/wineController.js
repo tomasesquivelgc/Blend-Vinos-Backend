@@ -1,4 +1,4 @@
-import { getAllWines, getWineById, createWine, updateWine, deleteWine, getWineByCodigo, getWineByCodigoDeBarras, getAllWinesPaginated, getWineByNombrePartial } from '../models/wineModel.js';
+import { getAllWines, getWineById, createWine, updateWine, deleteWine, getWineByCodigo, getWineByCodigoDeBarras, getAllWinesPaginated, getWineByNombrePartial, getWineByCepa, getWineByAnejamiento, getWineByEstilo } from '../models/wineModel.js';
 import { addHistory } from '../models/historyModel.js';
 
 export const listWines = async (req, res) => {
@@ -10,16 +10,20 @@ export const listWines = async (req, res) => {
       let precio = costoOriginal;
 
       // Ajuste según rol
-      if (req.user.rol_id === 2) precio *= 1.06;      // Socio
-      else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
+      if (req.user.rol_id === 2) precio *= 1.08;      // Socio
+      else if (req.user.rol_id === 3) precio *= 1.23; // Revendedor
+      else if (req.user.rol_id === 4) precio *= 1.15;  // Distribuidor
+      else if (req.user.rol_id === 5) precio *= 1.3; // Revendedor Socio
 
       // Precio recomendado al público (siempre basado en el costo original)
-      const precioRecomendado = costoOriginal * 1.484;
-
+      const precioRecomendado = costoOriginal * 1.78;
+      // Precio de oferta al público
+      const precioOferta = costoOriginal * 1.48;
       return { 
         ...wine, 
         costo: precio.toFixed(2),
-        precio_recomendado: precioRecomendado.toFixed(2)
+        precio_recomendado: precioRecomendado.toFixed(2),
+        precio_oferta: precioOferta.toFixed(2)
       };
     });
 
@@ -43,15 +47,27 @@ export const listWinesPaginated = async (req, res) => {
       const costoOriginal = parseFloat(wine.costo);
       let precio = costoOriginal;
 
-      if (req.user.rol_id === 2) precio *= 1.06;      // Socio
-      else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
+      if (req.user.rol_id === 2) precio *= 1.08;      // Socio
+      else if (req.user.rol_id === 3) precio *= 1.23; // Revendedor
+      else if (req.user.rol_id === 4) precio *= 1.15;  // Distribuidor
+      else if (req.user.rol_id === 5) precio *= 1.3; // Revendedor Socio
 
-      const precioRecomendado = costoOriginal * 1.484;
+      const precioSocio = costoOriginal * 1.08;
+      const precioRevendedor = costoOriginal * 1.23;
+      const precioDistribuidor = costoOriginal * 1.15;
+      const precioRevendedorSocio = costoOriginal * 1.3;
+      const precioRecomendado = costoOriginal * 1.78;
+      const precioOferta = costoOriginal * 1.48;
 
       return { 
         ...wine, 
         costo: precio.toFixed(2),
-        precioRecomendado: precioRecomendado.toFixed(2)
+        precioSocio: precioSocio.toFixed(2),
+        precioRevendedor: precioRevendedor.toFixed(2),
+        precioDistribuidor: precioDistribuidor.toFixed(2),
+        precioRecomendado: precioRecomendado.toFixed(2),
+        precioOferta: precioOferta.toFixed(2),
+        precioRevendedorSocio: precioRevendedorSocio.toFixed(2)
       };
     });
 
@@ -72,15 +88,27 @@ export const getWine = async (req, res) => {
     const costoOriginal = parseFloat(wine.costo);
     let precio = costoOriginal;
 
-    if (req.user.rol_id === 2) precio *= 1.06;      // Socio
-    else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
+    if (req.user.rol_id === 2) precio *= 1.08;      // Socio
+    else if (req.user.rol_id === 3) precio *= 1.23; // Revendedor
+    else if (req.user.rol_id === 4) precio *= 1.15;  // Distribuidor
+    else if (req.user.rol_id === 5) precio *= 1.3; // Revendedor Socio
 
-    const precioRecomendado = costoOriginal * 1.484;
+    const precioSocio = costoOriginal * 1.06;
+    const precioRevendedor = costoOriginal * 1.23;
+    const precioDistribuidor = costoOriginal * 1.15;
+    const precioRecomendado = costoOriginal * 1.78;
+    const precioOferta = costoOriginal * 1.48;
+    const precioRevendedorSocio = costoOriginal * 1.3;
 
     res.json({
       ...wine,
       costo: precio.toFixed(2),
-      precioRecomendado: 32
+      precioSocio: precioSocio.toFixed(2),
+      precioRevendedor: precioRevendedor.toFixed(2),
+      precioDistribuidor: precioDistribuidor.toFixed(2),
+      precioRecomendado: precioRecomendado.toFixed(2),
+      precioOferta: precioOferta.toFixed(2),
+      precioRevendedorSocio: precioRevendedorSocio.toFixed(2)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -184,9 +212,26 @@ export const findWineByCode = async (req, res) => {
         if (!existingIds.has(w.id)) wines.push(w);
       });
     }
-
-    if (wines.length === 0) {
-      return res.status(404).json({ message: "Vino no encontrado" });
+    const cepaMatches = await getWineByCepa(code);
+    if (cepaMatches && cepaMatches.length > 0) {
+      const existingIds = new Set(wines.map(w => w.id));
+      cepaMatches.forEach(w => {
+        if (!existingIds.has(w.id)) wines.push(w);
+      });
+    }
+    const anejamientoMatches = await getWineByAnejamiento(code);
+    if (anejamientoMatches && anejamientoMatches.length > 0) {
+      const existingIds = new Set(wines.map(w => w.id));  
+      anejamientoMatches.forEach(w => {
+        if (!existingIds.has(w.id)) wines.push(w);
+      });
+    }
+    const estiloMatches = await getWineByEstilo(code);
+    if (estiloMatches && estiloMatches.length > 0) {
+      const existingIds = new Set(wines.map(w => w.id));
+      estiloMatches.forEach(w => {
+        if (!existingIds.has(w.id)) wines.push(w);
+      });
     }
 
     // Apply price adjustments based on user role
@@ -194,15 +239,27 @@ export const findWineByCode = async (req, res) => {
       const costoOriginal = parseFloat(wine.costo);
       let precio = costoOriginal;
 
-      if (req.user.rol_id === 2) precio *= 1.06;      // Socio
-      else if (req.user.rol_id === 3) precio *= 1.22; // Revendedor
+      if (req.user.rol_id === 2) precio *= 1.08;      // Socio
+      else if (req.user.rol_id === 3) precio *= 1.23; // Revendedor
+      else if (req.user.rol_id === 4) precio *= 1.15;  // Distribuidor
+      else if (req.user.rol_id === 5) precio *= 1.3; // Revendedor Socio
+      const precioSocio = costoOriginal * 1.06;
+      const precioRevendedor = costoOriginal * 1.23;
+      const precioDistribuidor = costoOriginal * 1.15;
+      const precioRevendedorSocio = costoOriginal * 1.3;
+      const precioOferta = costoOriginal * 1.48;
 
-      const precioRecomendado = costoOriginal * 1.484;
+      const precioRecomendado = costoOriginal * 1.78;
 
       return {
         ...wine,
         costo: precio.toFixed(2),
-        precioRecomendado: precioRecomendado.toFixed(2)
+        precioSocio: precioSocio.toFixed(2),
+        precioRevendedor: precioRevendedor.toFixed(2),
+        precioDistribuidor: precioDistribuidor.toFixed(2),
+        precioRecomendado: precioRecomendado.toFixed(2),
+        precioOferta: precioOferta.toFixed(2),
+        precioRevendedorSocio: precioRevendedorSocio.toFixed(2)
       };
     });
 

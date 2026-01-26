@@ -1,11 +1,11 @@
 import db from "../db.js";
 import { addHistory } from "../models/historyModel.js";
-import {getWineById} from "../models/wineModel.js";
+import {getWineByCodigo} from "../models/wineModel.js";
 import { findUserById } from "../models/userModel.js";
 
 export const registerMovement = async (req, res) => {
   try {
-    const { wine_id, type, quantity, client_id = null, comment = null, nombre_de_cliente = null } = req.body;
+    const { wine_code, type, quantity, client_id = null, comment = null, nombre_de_cliente = null } = req.body;
     const usuario_id = req.user.id; // <-- comes from JWT (set in authenticate middleware)
 
     // Validate type
@@ -14,7 +14,11 @@ export const registerMovement = async (req, res) => {
     }
 
     // Fetch wine
-    const wine = await getWineById(wine_id);
+    const wine = await getWineByCodigo(wine_code);
+    const wine_id = wine.id;
+    if (!wine) {
+      return res.status(400).json({ error: "Vino no encontrado" });
+    }
 
     // Determine unit price taking into account the client's role (if any)
     let unitPrice = parseFloat(wine.costo);
@@ -26,8 +30,10 @@ export const registerMovement = async (req, res) => {
       }
 
       // Apply role-based adjustments to the unit price
-      if (client.rol_id === 2) unitPrice *= 1.06;      // Socio
+      if (client.rol_id === 2) unitPrice *= 1.08;      // Socio
       else if (client.rol_id === 3) unitPrice *= 1.22; // Revendedor
+      else if (req.user.rol_id === 4) precio *= 1.15;  // Distribuidor
+      else if (req.user.rol_id === 5) precio *= 1.3; // Revendedor Socio
     }
 
     // Calculate total cost for the movement
@@ -44,19 +50,8 @@ export const registerMovement = async (req, res) => {
       newTotal = wine.total - quantity;
     }
 
-    // Update stockReal
-    let newTotalReal;
-    if (type === "COMPRA") {
-      newTotalReal = wine.stockreal + quantity;
-    } else {
-      if (wine.stockreal < quantity) {
-        return res.status(400).json({ error: "No hay suficiente stock real disponible" });
-      }
-      newTotalReal = wine.stockreal - quantity;
-    }
 
     await db.query(`UPDATE vinos SET total = $1 WHERE id = $2`, [newTotal, wine_id]);
-    await db.query(`UPDATE vinos SET stockreal = $1 WHERE id = $2`, [newTotalReal, wine_id]);
 
     // Add history record
     const history = await addHistory({
@@ -135,7 +130,7 @@ export const getMovements = async (req, res) => {
 export const getMovementsByMonth = async (req, res) => {
   try {
     const now = new Date();
-    const { month = now.getMonth() + 1, year = now.getFullYear() } = req.query || {};
+    const { month = now.getMonth() + 1, year = now.getFullYear(), accion } = req.query || {};
 
     const parsedMonth = parseInt(month, 10);
     const parsedYear = parseInt(year, 10);
@@ -147,14 +142,27 @@ export const getMovementsByMonth = async (req, res) => {
       return res.status(400).json({ error: "Año inválido" });
     }
 
+    const allowed = ['COMPRA','VENTA','CREAR','ACTUALIZAR','ELIMINAR'];
+    const params = [parsedYear, parsedMonth];
+    let whereExtra = '';
+    if (accion != null && String(accion).trim() !== '') {
+      const accionUpper = String(accion).toUpperCase();
+      if (!allowed.includes(accionUpper)) {
+        return res.status(400).json({ error: 'Tipo de movimiento inválido' });
+      }
+      whereExtra = ' AND accion = $3';
+      params.push(accionUpper);
+    }
+
     const query = `
       SELECT *
       FROM historial
       WHERE EXTRACT(YEAR FROM fecha) = $1
         AND EXTRACT(MONTH FROM fecha) = $2
+        ${whereExtra}
       ORDER BY fecha DESC
     `;
-    const result = await db.query(query, [parsedYear, parsedMonth]);
+    const result = await db.query(query, params);
 
     res.json(result.rows);
   } catch (error) {

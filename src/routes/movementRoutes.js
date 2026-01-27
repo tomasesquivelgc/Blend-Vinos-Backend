@@ -1,5 +1,5 @@
 import express from "express";
-import { registerMovement, getMovements, registerRealStockMovement, getMovementsByMonth, getTopSoldWines } from "../controllers/movementsController.js";
+import { registerMovement, getMovements, registerRealStockMovement, getMovementsByMonth, getTopSoldWines, getMovementDetails, getAllMovementDetails } from "../controllers/movementsController.js";
 import { authenticate, authorizeRoles } from "../middlewares/auth.js";
 
 const router = express.Router();
@@ -18,5 +18,11 @@ router.post("/real-stock", authenticate, authorizeRoles(1), registerRealStockMov
 
 // get top sold wines (admin only)
 router.get("/top-sold", authenticate, authorizeRoles(1), getTopSoldWines);
+
+// get movement details by ID (admin only)
+router.get("/details/:id", authenticate, authorizeRoles(1), getMovementDetails);
+
+// get all movement details (admin only)
+router.get("/details", authenticate, authorizeRoles(1), getAllMovementDetails);
 
 export default router;

@@ -186,3 +186,33 @@ export const getTopSoldWines = async (req, res) => {
     res.status(500).json({ error: "Error al obtener los vinos más vendidos" });
   }
 };
+
+export const getMovementDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const query = `
+      SELECT *
+      FROM movimiento_detalle
+      WHERE movimiento_id = $1
+    `;
+    const result = await db.query(query, [id]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al obtener los detalles de la transacción" });
+  }
+};
+
+export const getAllMovementDetails = async (req, res) => {
+  try {
+    const query = `
+      SELECT *
+      FROM movimiento_detalle
+    `;
+    const result = await db.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al obtener los detalles de las transacciones" });
+  }
+};

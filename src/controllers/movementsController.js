@@ -2,81 +2,130 @@ import db from "../db.js";
 import { addHistory } from "../models/historyModel.js";
 import {getWineById} from "../models/wineModel.js";
 import { findUserById } from "../models/userModel.js";
+import { addHistoryDetail } from "../models/historyDetailModel.js";
 
 export const registerMovement = async (req, res) => {
-  try {
-    const { wine_id, type, quantity, client_id = null, comment = null, nombre_de_cliente = null } = req.body;
-    const usuario_id = req.user.id; // <-- comes from JWT (set in authenticate middleware)
+  const client = await db.connect();
 
-    // Validate type
+  try {
+    const {
+      wine_id,          // array
+      quantity,         // array
+      type,
+      client_id = null,
+      comment = null,
+      nombre_de_cliente = null
+    } = req.body;
+
+    const usuario_id = req.user.id;
+
+    // --- Basic validations ---
     if (!["COMPRA", "VENTA"].includes(type)) {
       return res.status(400).json({ error: "Tipo de transacción inválido" });
     }
 
-    // Fetch wine
-    const wine = await getWineById(wine_id);
+    if (!Array.isArray(wine_id) || !Array.isArray(quantity)) {
+      return res.status(400).json({ error: "wine_id y quantity deben ser arrays" });
+    }
 
-    // Determine unit price taking into account the client's role (if any)
-    let unitPrice = parseFloat(wine.costo);
+    if (wine_id.length !== quantity.length) {
+      return res.status(400).json({ error: "wine_id y quantity deben tener la misma longitud" });
+    }
+
+    await client.query("BEGIN");
+
+    // --- Fetch client role once ---
+    let roleMultiplier = 1;
     if (client_id) {
-      // Validate client exists and get their role
-      const client = await findUserById(client_id);
-      if (!client) {
-        return res.status(400).json({ error: "Cliente no encontrado" });
+      const clientUser = await findUserById(client_id);
+      if (!clientUser) {
+        throw new Error("Cliente no encontrado");
       }
 
-      // Apply role-based adjustments to the unit price
-      if (client.rol_id === 2) unitPrice *= 1.06;      // Socio
-      else if (client.rol_id === 3) unitPrice *= 1.22; // Revendedor
+      if (clientUser.rol_id === 2) roleMultiplier = 1.06;
+      else if (clientUser.rol_id === 3) roleMultiplier = 1.22;
     }
 
-    // Calculate total cost for the movement
-    let costo = unitPrice * quantity;
+    let costoTotal = 0;
+    const wineCache = {};
 
-    // Update stock
-    let newTotal;
-    if (type === "COMPRA") {
-      newTotal = wine.total + quantity;
-    } else {
-      if (wine.total < quantity) {
-        return res.status(400).json({ error: "No hay suficiente stock disponible" });
+    // --- Validate stock & calculate totals ---
+    for (let i = 0; i < wine_id.length; i++) {
+      const id = wine_id[i];
+      const qty = quantity[i];
+
+      if (qty <= 0) {
+        throw new Error("Cantidad inválida");
       }
-      newTotal = wine.total - quantity;
-    }
 
-    // Update stockReal
-    let newTotalReal;
-    if (type === "COMPRA") {
-      newTotalReal = wine.stockreal + quantity;
-    } else {
-      if (wine.stockreal < quantity) {
-        return res.status(400).json({ error: "No hay suficiente stock real disponible" });
+      const wine = await getWineById(id);
+      if (!wine) {
+        throw new Error(`Vino ${id} no encontrado`);
       }
-      newTotalReal = wine.stockreal - quantity;
+
+      if (type === "VENTA" && wine.total < qty) {
+        throw new Error(`Stock insuficiente para ${wine.nombre}`);
+      }
+
+      const unitPrice = parseFloat(wine.costo) * roleMultiplier;
+      costoTotal += unitPrice * qty;
+
+      wineCache[id] = { wine, unitPrice, qty };
     }
 
-    await db.query(`UPDATE vinos SET total = $1 WHERE id = $2`, [newTotal, wine_id]);
-    await db.query(`UPDATE vinos SET stockreal = $1 WHERE id = $2`, [newTotalReal, wine_id]);
-
-    // Add history record
-    const history = await addHistory({
-      vino_id: wine_id,
-      usuario_id,         // taken from token
+    // --- Insert master movement ---
+    const movimiento = await addHistory({
+      usuario_id,
       cliente_id: client_id,
       accion: type,
-      cantidad: quantity,
-      costo: costo,
+      costo: costoTotal,
       comentario: comment,
-      vino_nombre: wine.nombre,
-      nombre_de_cliente: nombre_de_cliente
+      nombre_de_cliente
     });
 
-    res.status(201).json({ message: "Transacción creada exitosamente", history });
+    // --- Update stock + insert details ---
+    for (const [id, data] of Object.entries(wineCache)) {
+      const { wine, unitPrice, qty } = data;
+
+      const newTotal =
+        type === "COMPRA"
+          ? wine.total + qty
+          : wine.total - qty;
+
+      const newTotalReal =
+        type === "COMPRA"
+          ? wine.stockreal + qty
+          : wine.stockreal - qty;
+
+      await client.query(
+        `UPDATE vinos SET total = $1, stockreal = $2 WHERE id = $3`,
+        [newTotal, newTotalReal, id]
+      );
+
+      await addHistoryDetail({
+        movimiento_id: movimiento.id,
+        vino_id: id,
+        cantidad: qty,
+        precio_unitario: unitPrice
+      });
+    }
+
+    await client.query("COMMIT");
+
+    res.status(201).json({
+      message: "Transacción creada exitosamente",
+      movimiento_id: movimiento.id
+    });
+
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Error creating movement:", error);
-    res.status(500).json({ error: "Error al crear transacción" });
+    res.status(500).json({ error: error.message || "Error al crear transacción" });
+  } finally {
+    client.release();
   }
 };
+
 
 export const registerRealStockMovement = async (req, res) => {
   try{

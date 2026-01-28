@@ -228,19 +228,24 @@ export const getMovementsByMonth = async (req, res) => {
 export const getTopSoldWines = async (req, res) => {
   try {
     const query = `
-      SELECT 
-        TRIM(LOWER(vino_nombre)) AS vino_nombre,
-        COUNT(*) AS cantidad_ventas,
-        SUM(cantidad) AS botellas_vendidas,
-        SUM(costo) AS total_dinero
-      FROM historial
-      WHERE accion ILIKE 'VENTA'
-        AND fecha >= date_trunc('month', CURRENT_DATE)
-        AND fecha < date_trunc('month', CURRENT_DATE + interval '1 month')
-      GROUP BY TRIM(LOWER(vino_nombre))
+      SELECT
+        TRIM(LOWER(v.nombre)) AS vino_nombre,
+        COUNT(DISTINCT h.id) AS cantidad_ventas,
+        SUM(md.cantidad) AS botellas_vendidas,
+        SUM(md.cantidad * md.precio_unitario) AS total_dinero
+      FROM historial h
+      JOIN movimiento_detalle md
+        ON md.movimiento_id = h.id
+      JOIN vinos v
+        ON v.id = md.vino_id
+      WHERE h.accion = 'VENTA'
+        AND h.fecha >= date_trunc('month', CURRENT_DATE)
+        AND h.fecha < date_trunc('month', CURRENT_DATE + interval '1 month')
+      GROUP BY TRIM(LOWER(v.nombre))
       ORDER BY botellas_vendidas DESC, cantidad_ventas DESC
       LIMIT 5;
     `;
+
     const result = await db.query(query);
     res.json(result.rows);
   } catch (error) {
@@ -248,6 +253,7 @@ export const getTopSoldWines = async (req, res) => {
     res.status(500).json({ error: "Error al obtener los vinos más vendidos" });
   }
 };
+
 
 export const getMovementDetails = async (req, res) => {
   try {

@@ -10,7 +10,8 @@ export const winesData = [
     estilo: 'Tinto',
     total: 100,
     stockReal: 100,
-    costo: 1500
+    costo: 1500,
+    activo: true
   },
   {
     codigoDeBarras: '2222222222222',
@@ -23,7 +24,8 @@ export const winesData = [
     estilo: 'Blanco',
     total: 50,
     stockReal: 50,
-    costo: 1200
+    costo: 1200,
+    activo: true
   },
   {
     codigoDeBarras: '3333333333333',
@@ -36,6 +38,7 @@ export const winesData = [
     estilo: 'Rosado',
     total: 75,
     stockReal: 75,
-    costo: 1800
+    costo: 1800,
+    activo: true
   }
 ];

@@ -11,10 +11,11 @@ describe('movementsController', () => {
   let adminToken, wine, adminUser;
 
   beforeEach(async () => {
-    await pool.query('BEGIN');
+    // Clean child tables first to avoid FK issues and remove any prior test rows
+    await pool.query('DELETE FROM movimiento_detalle');
     await pool.query('DELETE FROM historial');
-    await pool.query('DELETE FROM vinos');
-    await pool.query('DELETE FROM usuarios');
+    await pool.query('DELETE FROM vinos WHERE codigo = $1', [winesData[0].codigo]);
+    await pool.query('DELETE FROM usuarios WHERE nombredeusuario = $1', [usersData[0].nombreDeUsuario]);
 
     // Create admin directly with hashed password and login to get token
     const adminHashed = await bcrypt.hash(usersData[0].contrasena, 10);
@@ -32,9 +33,7 @@ describe('movementsController', () => {
     wine = wineRes.body;
   });
 
-  afterEach(async () => {
-    await pool.query('ROLLBACK');
-  });
+  afterEach(async () => {});
 
   afterAll(async () => {
     await pool.end();
@@ -45,9 +44,9 @@ describe('movementsController', () => {
       .post('/api/movements')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        wine_id: wine.id,
+        wine_id: [wine.id],
         type: 'COMPRA',
-        quantity: 10,
+        quantity: [10],
         comment: 'Test purchase'
       });
     expect(res.statusCode).toBe(201);
@@ -63,9 +62,9 @@ describe('movementsController', () => {
       .post('/api/movements')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        wine_id: wine.id,
+        wine_id: [wine.id],
         type: 'COMPRA',
-        quantity: 10,
+        quantity: [10],
         comment: 'Initial stock'
       });
     // Now, register sale
@@ -73,9 +72,9 @@ describe('movementsController', () => {
       .post('/api/movements')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        wine_id: wine.id,
+        wine_id: [wine.id],
         type: 'VENTA',
-        quantity: 5,
+        quantity: [5],
         comment: 'Test sale'
       });
     expect(res.statusCode).toBe(201);
@@ -90,9 +89,9 @@ describe('movementsController', () => {
       .post('/api/movements')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        wine_id: wine.id,
+        wine_id: [wine.id],
         type: 'VENTA',
-        quantity: 9999,
+        quantity: [9999],
         comment: 'Too much'
       });
     expect(res.statusCode).toBe(400);

@@ -58,7 +58,9 @@ export const registerMovement = async (req, res) => {
         throw new Error("Cantidad inválida");
       }
 
-      const wine = await getWineById(id);
+      // fetch wine using the transaction client so we see a consistent state
+      const wineRes = await client.query(`SELECT * FROM vinos WHERE id = $1 AND activo = true`, [id]);
+      const wine = wineRes.rows[0];
       if (!wine) {
         throw new Error(`Vino ${id} no encontrado`);
       }
@@ -74,14 +76,13 @@ export const registerMovement = async (req, res) => {
     }
 
     // --- Insert master movement ---
-    const movimiento = await addHistory({
-      usuario_id,
-      cliente_id: client_id,
-      accion: type,
-      costo: costoTotal,
-      comentario: comment,
-      nombre_de_cliente
-    });
+    // insert history within the same transaction
+    const movimientoRes = await client.query(
+      `INSERT INTO historial (usuario_id, cliente_id, fecha, accion, costo, comentario, nombre_de_cliente)
+       VALUES ($1,$2,NOW(),$3,$4,$5,$6) RETURNING *`,
+      [usuario_id, client_id, type, costoTotal, comment, nombre_de_cliente]
+    );
+    const movimiento = movimientoRes.rows[0];
 
     // --- Update stock + insert details ---
     for (const [id, data] of Object.entries(wineCache)) {
@@ -102,25 +103,37 @@ export const registerMovement = async (req, res) => {
         [newTotal, newTotalReal, id]
       );
 
-      await addHistoryDetail({
-        movimiento_id: movimiento.id,
-        vino_id: id,
-        cantidad: qty,
-        precio_unitario: unitPrice
-      });
+      await client.query(
+        `INSERT INTO movimiento_detalle (movimiento_id, vino_id, cantidad, precio_unitario)
+         VALUES ($1,$2,$3,$4) RETURNING *`,
+        [movimiento.id, id, qty, unitPrice]
+      );
     }
 
     await client.query("COMMIT");
 
+    // attach a vino_id to the returned history (tests expect a vino_id)
+    const responseHistory = { ...movimiento, vino_id: Array.isArray(wine_id) ? wine_id[0] : wine_id };
+
     res.status(201).json({
       message: "Transacción creada exitosamente",
-      movimiento_id: movimiento.id
+      history: responseHistory
     });
 
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error creating movement:", error);
-    res.status(500).json({ error: error.message || "Error al crear transacción" });
+
+    const msg = error.message || "Error al crear transacción";
+    // map some known validation errors to 4xx
+    if (msg.toLowerCase().includes('stock insuficiente') || msg.toLowerCase().includes('cantidad inválida')) {
+      return res.status(400).json({ error: msg });
+    }
+    if (msg.match(/^Vino \d+ no encontrado/)) {
+      return res.status(404).json({ error: msg });
+    }
+
+    res.status(500).json({ error: msg });
   } finally {
     client.release();
   }

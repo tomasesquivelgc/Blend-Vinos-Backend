@@ -97,10 +97,8 @@ export const addWine = async (req, res) => {
       vino_id: newWine.id,
       usuario_id: req.user.id,
       accion: "CREAR",
-      cantidad: req.body.cantidad,
       costo: req.body.costo,
       comentario: "Vino creado",
-      vino_nombre: newWine.nombre
     });
 
     res.status(201).json(newWine);
@@ -121,10 +119,8 @@ export const editWine = async (req, res) => {
       vino_id: id,
       usuario_id: req.user.id,
       accion: "ACTUALIZAR",
-      cantidad: req.body.cantidad,
       costo: req.body.costo,
-      comentario: "Vino actualizado",
-      vino_nombre: updatedWine.nombre
+      comentario: "Vino actualizado"
     });
 
     res.json(updatedWine);

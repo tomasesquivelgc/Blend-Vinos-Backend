@@ -1,6 +1,6 @@
 import db from "../db.js";
 import { addHistory } from "../models/historyModel.js";
-import {getWineById} from "../models/wineModel.js";
+import {getWineByCodigo} from "../models/wineModel.js";
 import { findUserById } from "../models/userModel.js";
 import { addHistoryDetail } from "../models/historyDetailModel.js";
 
@@ -16,14 +16,12 @@ export const registerMovement = async (req, res) => {
       comment = null,
       nombre_de_cliente = null
     } = req.body;
-
     const usuario_id = req.user.id;
 
     // --- Basic validations ---
     if (!["COMPRA", "VENTA"].includes(type)) {
       return res.status(400).json({ error: "Tipo de transacción inválido" });
     }
-
     if (!Array.isArray(wine_id) || !Array.isArray(quantity)) {
       return res.status(400).json({ error: "wine_id y quantity deben ser arrays" });
     }
@@ -42,8 +40,11 @@ export const registerMovement = async (req, res) => {
         throw new Error("Cliente no encontrado");
       }
 
-      if (clientUser.rol_id === 2) roleMultiplier = 1.06;
-      else if (clientUser.rol_id === 3) roleMultiplier = 1.22;
+      // Apply role-based adjustments to the unit price
+      if (client.rol_id === 2) unitPrice *= 1.08;      // Socio
+      else if (client.rol_id === 3) unitPrice *= 1.22; // Revendedor
+      else if (req.user.rol_id === 4) precio *= 1.15;  // Distribuidor
+      else if (req.user.rol_id === 5) precio *= 1.3; // Revendedor Socio
     }
 
     let costoTotal = 0;
@@ -225,7 +226,7 @@ export const getMovements = async (req, res) => {
 export const getMovementsByMonth = async (req, res) => {
   try {
     const now = new Date();
-    const { month = now.getMonth() + 1, year = now.getFullYear() } = req.query || {};
+    const { month = now.getMonth() + 1, year = now.getFullYear(), accion } = req.query || {};
 
     const parsedMonth = parseInt(month, 10);
     const parsedYear = parseInt(year, 10);
@@ -237,14 +238,27 @@ export const getMovementsByMonth = async (req, res) => {
       return res.status(400).json({ error: "Año inválido" });
     }
 
+    const allowed = ['COMPRA','VENTA','CREAR','ACTUALIZAR','ELIMINAR'];
+    const params = [parsedYear, parsedMonth];
+    let whereExtra = '';
+    if (accion != null && String(accion).trim() !== '') {
+      const accionUpper = String(accion).toUpperCase();
+      if (!allowed.includes(accionUpper)) {
+        return res.status(400).json({ error: 'Tipo de movimiento inválido' });
+      }
+      whereExtra = ' AND accion = $3';
+      params.push(accionUpper);
+    }
+
     const query = `
       SELECT *
       FROM historial
       WHERE EXTRACT(YEAR FROM fecha) = $1
         AND EXTRACT(MONTH FROM fecha) = $2
+        ${whereExtra}
       ORDER BY fecha DESC
     `;
-    const result = await db.query(query, [parsedYear, parsedMonth]);
+    const result = await db.query(query, params);
 
     res.json(result.rows);
   } catch (error) {

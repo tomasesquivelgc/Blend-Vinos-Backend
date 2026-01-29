@@ -9,8 +9,8 @@ export const registerMovement = async (req, res) => {
 
   try {
     const {
-      wine_id,          // array
-      quantity,         // array
+      wine_id,          // ← en realidad SON CÓDIGOS (array de strings)
+      quantity,         // array de numbers
       type,
       client_id = null,
       comment = null,
@@ -47,22 +47,27 @@ export const registerMovement = async (req, res) => {
     }
 
     let costoTotal = 0;
+
+    // clave: wineId REAL → data
     const wineCache = {};
 
     // --- Validate stock & calculate totals ---
     for (let i = 0; i < wine_id.length; i++) {
-      const id = wine_id[i];
+      const wineCode = wine_id[i]; // ← ES UN CÓDIGO
       const qty = quantity[i];
 
       if (qty <= 0) {
         throw new Error("Cantidad inválida");
       }
 
-      // fetch wine using the transaction client so we see a consistent state
-      const wineRes = await client.query(`SELECT * FROM vinos WHERE id = $1 AND activo = true`, [id]);
+      const wineRes = await client.query(
+        `SELECT * FROM vinos WHERE codigo = $1 AND activo = true`,
+        [wineCode]
+      );
+
       const wine = wineRes.rows[0];
       if (!wine) {
-        throw new Error(`Vino ${id} no encontrado`);
+        throw new Error(`Vino ${wineCode} no encontrado`);
       }
 
       if (type === "VENTA" && wine.total < qty) {
@@ -72,20 +77,32 @@ export const registerMovement = async (req, res) => {
       const unitPrice = parseFloat(wine.costo) * roleMultiplier;
       costoTotal += unitPrice * qty;
 
-      wineCache[id] = { wine, unitPrice, qty };
+      // usar SIEMPRE el ID real de la DB
+      if (wineCache[wine.id]) {
+        // por seguridad, si llega duplicado desde frontend
+        wineCache[wine.id].qty += qty;
+      } else {
+        wineCache[wine.id] = {
+          wine,
+          unitPrice,
+          qty
+        };
+      }
     }
 
     // --- Insert master movement ---
-    // insert history within the same transaction
     const movimientoRes = await client.query(
-      `INSERT INTO historial (usuario_id, cliente_id, fecha, accion, costo, comentario, nombre_de_cliente)
-       VALUES ($1,$2,NOW(),$3,$4,$5,$6) RETURNING *`,
+      `INSERT INTO historial
+        (usuario_id, cliente_id, fecha, accion, costo, comentario, nombre_de_cliente)
+       VALUES ($1,$2,NOW(),$3,$4,$5,$6)
+       RETURNING *`,
       [usuario_id, client_id, type, costoTotal, comment, nombre_de_cliente]
     );
+
     const movimiento = movimientoRes.rows[0];
 
     // --- Update stock + insert details ---
-    for (const [id, data] of Object.entries(wineCache)) {
+    for (const [wineId, data] of Object.entries(wineCache)) {
       const { wine, unitPrice, qty } = data;
 
       const newTotal =
@@ -99,21 +116,27 @@ export const registerMovement = async (req, res) => {
           : wine.stockreal - qty;
 
       await client.query(
-        `UPDATE vinos SET total = $1, stockreal = $2 WHERE id = $3`,
-        [newTotal, newTotalReal, id]
+        `UPDATE vinos
+         SET total = $1, stockreal = $2
+         WHERE id = $3`,
+        [newTotal, newTotalReal, wineId]
       );
 
       await client.query(
-        `INSERT INTO movimiento_detalle (movimiento_id, vino_id, cantidad, precio_unitario)
-         VALUES ($1,$2,$3,$4) RETURNING *`,
-        [movimiento.id, id, qty, unitPrice]
+        `INSERT INTO movimiento_detalle
+          (movimiento_id, vino_id, cantidad, precio_unitario)
+         VALUES ($1,$2,$3,$4)`,
+        [movimiento.id, wineId, qty, unitPrice]
       );
     }
 
     await client.query("COMMIT");
 
-    // attach a vino_id to the returned history (tests expect a vino_id)
-    const responseHistory = { ...movimiento, vino_id: Array.isArray(wine_id) ? wine_id[0] : wine_id };
+    // compat tests legacy
+    const responseHistory = {
+      ...movimiento,
+      vino_id: Object.keys(wineCache)[0]
+    };
 
     res.status(201).json({
       message: "Transacción creada exitosamente",
@@ -125,11 +148,15 @@ export const registerMovement = async (req, res) => {
     console.error("Error creating movement:", error);
 
     const msg = error.message || "Error al crear transacción";
-    // map some known validation errors to 4xx
-    if (msg.toLowerCase().includes('stock insuficiente') || msg.toLowerCase().includes('cantidad inválida')) {
+
+    if (
+      msg.toLowerCase().includes("stock insuficiente") ||
+      msg.toLowerCase().includes("cantidad inválida")
+    ) {
       return res.status(400).json({ error: msg });
     }
-    if (msg.match(/^Vino \d+ no encontrado/)) {
+
+    if (msg.toLowerCase().includes("no encontrado")) {
       return res.status(404).json({ error: msg });
     }
 
@@ -138,6 +165,7 @@ export const registerMovement = async (req, res) => {
     client.release();
   }
 };
+
 
 
 export const registerRealStockMovement = async (req, res) => {

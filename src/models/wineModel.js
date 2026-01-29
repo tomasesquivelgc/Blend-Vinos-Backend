@@ -2,10 +2,16 @@ import pool from '../db.js';
 
 // Get all wines
 export async function getAllWines() {
-  const query = `SELECT * FROM vinos ORDER BY nombre`;
+  const query = `
+    SELECT *
+    FROM vinos
+    WHERE activo = true
+    ORDER BY nombre
+  `;
   const { rows } = await pool.query(query);
   return rows;
 }
+
 
 // Get all wines paginated and ordered by nombre, cepa, anejamiento, bodega, distribuidor, estilo in ASC or DESC
 export async function getAllWinesPaginated(page, limit, order, orderBy) {
@@ -19,32 +25,32 @@ export async function getAllWinesPaginated(page, limit, order, orderBy) {
   const allowedColumns = ["nombre", "cepa", "anejamiento", "bodega", "distribuidor", "estilo", "costo", "total"];
   const sortBy = allowedColumns.includes(orderBy) ? orderBy : "nombre";
 
-  const query = `SELECT * FROM vinos ORDER BY ${sortBy} ${sortOrder} LIMIT $1 OFFSET $2`;
+  const query = `SELECT * FROM vinos WHERE activo = true ORDER BY ${sortBy} ${sortOrder} LIMIT $1 OFFSET $2`;
   const { rows } = await pool.query(query, [limitNum, pageNum * limitNum]);
   return rows;
 }
 
 // Get wine by ID
 export async function getWineById(id) {
-  const query = `SELECT * FROM vinos WHERE id = $1`;
+  const query = `SELECT * FROM vinos WHERE id = $1 AND activo = true`;
   const { rows } = await pool.query(query, [id]);
   return rows[0];
 }
 
 export async function getWineByCodigoDeBarras(codigoDeBarras) {
-  const query = `SELECT * FROM vinos WHERE codigoDeBarras = $1`;
+  const query = `SELECT * FROM vinos WHERE codigoDeBarras = $1 AND activo = true`;
   const { rows } = await pool.query(query, [codigoDeBarras]);
   return rows[0];
 }
 
 export async function getWineByCodigo(codigo) {
-  const query = `SELECT * FROM vinos WHERE codigo = $1`;
+  const query = `SELECT * FROM vinos WHERE codigo = $1 AND activo = true`;
   const { rows } = await pool.query(query, [codigo]);
   return rows[0];
 }
 
 export async function getWineByNombre(nombre) {
-  const query = `SELECT * FROM vinos WHERE LOWER(nombre) = LOWER($1)`;
+  const query = `SELECT * FROM vinos WHERE LOWER(nombre) = LOWER($1) AND activo = true`;
   const { rows } = await pool.query(query, [nombre]);
   return rows;
 }
@@ -106,14 +112,23 @@ export const updateWine = async (id, wineData) => {
 
 // DELETE wine
 export const deleteWine = async (id) => {
-  const result = await pool.query('DELETE FROM vinos WHERE id=$1 RETURNING *', [id]);
+  const result = await pool.query(
+    `
+    UPDATE vinos
+    SET activo = false
+    WHERE id = $1 AND activo = true
+    RETURNING *;
+    `,
+    [id]
+  );
+
   return result.rows[0];
 };
 
 export async function getWineByNombrePartial(name) {
   const query = `
     SELECT * FROM vinos 
-    WHERE LOWER(nombre) LIKE LOWER($1)
+    WHERE LOWER(nombre) LIKE LOWER($1) AND activo = true
   `;
   const { rows } = await pool.query(query, [`%${name}%`]);
   return rows;

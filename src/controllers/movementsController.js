@@ -2,31 +2,42 @@ import db from "../db.js";
 import { addHistory } from "../models/historyModel.js";
 import {getWineByCodigo} from "../models/wineModel.js";
 import { findUserById } from "../models/userModel.js";
+import { addHistoryDetail } from "../models/historyDetailModel.js";
 
 export const registerMovement = async (req, res) => {
-  try {
-    const { wine_code, type, quantity, client_id = null, comment = null, nombre_de_cliente = null } = req.body;
-    const usuario_id = req.user.id; // <-- comes from JWT (set in authenticate middleware)
+  const client = await db.connect();
 
-    // Validate type
+  try {
+    const {
+      wine_id,          // ← en realidad SON CÓDIGOS (array de strings)
+      quantity,         // array de numbers
+      type,
+      client_id = null,
+      comment = null,
+      nombre_de_cliente = null
+    } = req.body;
+    const usuario_id = req.user.id;
+
+    // --- Basic validations ---
     if (!["COMPRA", "VENTA"].includes(type)) {
       return res.status(400).json({ error: "Tipo de transacción inválido" });
     }
-
-    // Fetch wine
-    const wine = await getWineByCodigo(wine_code);
-    const wine_id = wine.id;
-    if (!wine) {
-      return res.status(400).json({ error: "Vino no encontrado" });
+    if (!Array.isArray(wine_id) || !Array.isArray(quantity)) {
+      return res.status(400).json({ error: "wine_id y quantity deben ser arrays" });
     }
 
-    // Determine unit price taking into account the client's role (if any)
-    let unitPrice = parseFloat(wine.costo);
+    if (wine_id.length !== quantity.length) {
+      return res.status(400).json({ error: "wine_id y quantity deben tener la misma longitud" });
+    }
+
+    await client.query("BEGIN");
+
+    // --- Fetch client role once ---
+    let roleMultiplier = 1;
     if (client_id) {
-      // Validate client exists and get their role
-      const client = await findUserById(client_id);
-      if (!client) {
-        return res.status(400).json({ error: "Cliente no encontrado" });
+      const clientUser = await findUserById(client_id);
+      if (!clientUser) {
+        throw new Error("Cliente no encontrado");
       }
 
       // Apply role-based adjustments to the unit price
@@ -36,42 +47,127 @@ export const registerMovement = async (req, res) => {
       else if (req.user.rol_id === 5) precio *= 1.3; // Revendedor Socio
     }
 
-    // Calculate total cost for the movement
-    let costo = unitPrice * quantity;
+    let costoTotal = 0;
 
-    // Update stock
-    let newTotal;
-    if (type === "COMPRA") {
-      newTotal = wine.total + quantity;
-    } else {
-      if (wine.total < quantity) {
-        return res.status(400).json({ error: "No hay suficiente stock disponible" });
+    // clave: wineId REAL → data
+    const wineCache = {};
+
+    // --- Validate stock & calculate totals ---
+    for (let i = 0; i < wine_id.length; i++) {
+      const wineCode = wine_id[i]; // ← ES UN CÓDIGO
+      const qty = quantity[i];
+
+      if (qty <= 0) {
+        throw new Error("Cantidad inválida");
       }
-      newTotal = wine.total - quantity;
+
+      const wineRes = await client.query(
+        `SELECT * FROM vinos WHERE codigo = $1 AND activo = true`,
+        [wineCode]
+      );
+
+      const wine = wineRes.rows[0];
+      if (!wine) {
+        throw new Error(`Vino ${wineCode} no encontrado`);
+      }
+
+      if (type === "VENTA" && wine.total < qty) {
+        throw new Error(`Stock insuficiente para ${wine.nombre}`);
+      }
+
+      const unitPrice = parseFloat(wine.costo) * roleMultiplier;
+      costoTotal += unitPrice * qty;
+
+      // usar SIEMPRE el ID real de la DB
+      if (wineCache[wine.id]) {
+        // por seguridad, si llega duplicado desde frontend
+        wineCache[wine.id].qty += qty;
+      } else {
+        wineCache[wine.id] = {
+          wine,
+          unitPrice,
+          qty
+        };
+      }
     }
 
+    // --- Insert master movement ---
+    const movimientoRes = await client.query(
+      `INSERT INTO historial
+        (usuario_id, cliente_id, fecha, accion, costo, comentario, nombre_de_cliente)
+       VALUES ($1,$2,NOW(),$3,$4,$5,$6)
+       RETURNING *`,
+      [usuario_id, client_id, type, costoTotal, comment, nombre_de_cliente]
+    );
 
-    await db.query(`UPDATE vinos SET total = $1 WHERE id = $2`, [newTotal, wine_id]);
+    const movimiento = movimientoRes.rows[0];
 
-    // Add history record
-    const history = await addHistory({
-      vino_id: wine_id,
-      usuario_id,         // taken from token
-      cliente_id: client_id,
-      accion: type,
-      cantidad: quantity,
-      costo: costo,
-      comentario: comment,
-      vino_nombre: wine.nombre,
-      nombre_de_cliente: nombre_de_cliente
+    // --- Update stock + insert details ---
+    for (const [wineId, data] of Object.entries(wineCache)) {
+      const { wine, unitPrice, qty } = data;
+
+      const newTotal =
+        type === "COMPRA"
+          ? wine.total + qty
+          : wine.total - qty;
+
+      const newTotalReal =
+        type === "COMPRA"
+          ? wine.stockreal + qty
+          : wine.stockreal - qty;
+
+      await client.query(
+        `UPDATE vinos
+         SET total = $1, stockreal = $2
+         WHERE id = $3`,
+        [newTotal, newTotalReal, wineId]
+      );
+
+      await client.query(
+        `INSERT INTO movimiento_detalle
+          (movimiento_id, vino_id, cantidad, precio_unitario)
+         VALUES ($1,$2,$3,$4)`,
+        [movimiento.id, wineId, qty, unitPrice]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    // compat tests legacy
+    const responseHistory = {
+      ...movimiento,
+      vino_id: Object.keys(wineCache)[0]
+    };
+
+    res.status(201).json({
+      message: "Transacción creada exitosamente",
+      history: responseHistory
     });
 
-    res.status(201).json({ message: "Transacción creada exitosamente", history });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Error creating movement:", error);
-    res.status(500).json({ error: "Error al crear transacción" });
+
+    const msg = error.message || "Error al crear transacción";
+
+    if (
+      msg.toLowerCase().includes("stock insuficiente") ||
+      msg.toLowerCase().includes("cantidad inválida")
+    ) {
+      return res.status(400).json({ error: msg });
+    }
+
+    if (msg.toLowerCase().includes("no encontrado")) {
+      return res.status(404).json({ error: msg });
+    }
+
+    res.status(500).json({ error: msg });
+  } finally {
+    client.release();
   }
 };
+
+
 
 export const registerRealStockMovement = async (req, res) => {
   try{
@@ -174,23 +270,59 @@ export const getMovementsByMonth = async (req, res) => {
 export const getTopSoldWines = async (req, res) => {
   try {
     const query = `
-      SELECT 
-        TRIM(LOWER(vino_nombre)) AS vino_nombre,
-        COUNT(*) AS cantidad_ventas,
-        SUM(cantidad) AS botellas_vendidas,
-        SUM(costo) AS total_dinero
-      FROM historial
-      WHERE accion ILIKE 'VENTA'
-        AND fecha >= date_trunc('month', CURRENT_DATE)
-        AND fecha < date_trunc('month', CURRENT_DATE + interval '1 month')
-      GROUP BY TRIM(LOWER(vino_nombre))
+      SELECT
+        TRIM(LOWER(v.nombre)) AS vino_nombre,
+        COUNT(DISTINCT h.id) AS cantidad_ventas,
+        SUM(md.cantidad) AS botellas_vendidas,
+        SUM(md.cantidad * md.precio_unitario) AS total_dinero
+      FROM historial h
+      JOIN movimiento_detalle md
+        ON md.movimiento_id = h.id
+      JOIN vinos v
+        ON v.id = md.vino_id
+      WHERE h.accion = 'VENTA'
+        AND h.fecha >= date_trunc('month', CURRENT_DATE)
+        AND h.fecha < date_trunc('month', CURRENT_DATE + interval '1 month')
+      GROUP BY TRIM(LOWER(v.nombre))
       ORDER BY botellas_vendidas DESC, cantidad_ventas DESC
       LIMIT 5;
     `;
+
     const result = await db.query(query);
     res.json(result.rows);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error al obtener los vinos más vendidos" });
+  }
+};
+
+
+export const getMovementDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const query = `
+      SELECT *
+      FROM movimiento_detalle
+      WHERE movimiento_id = $1
+    `;
+    const result = await db.query(query, [id]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al obtener los detalles de la transacción" });
+  }
+};
+
+export const getAllMovementDetails = async (req, res) => {
+  try {
+    const query = `
+      SELECT *
+      FROM movimiento_detalle
+    `;
+    const result = await db.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error al obtener los detalles de las transacciones" });
   }
 };

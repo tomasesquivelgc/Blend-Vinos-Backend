@@ -125,9 +125,9 @@ export const registerMovement = async (req, res) => {
 
       await client.query(
         `INSERT INTO movimiento_detalle
-          (movimiento_id, vino_id, cantidad, precio_unitario)
-         VALUES ($1,$2,$3,$4)`,
-        [movimiento.id, wineId, qty, unitPrice]
+          (movimiento_id, vino_id, vino_nombre, cantidad, precio_unitario)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [movimiento.id, wineId, wine.nombre, qty, unitPrice]
       );
     }
 

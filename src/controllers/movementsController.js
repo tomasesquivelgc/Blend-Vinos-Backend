@@ -300,13 +300,24 @@ export const getTopSoldWines = async (req, res) => {
 export const getMovementDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const query = `
-      SELECT *
-      FROM movimiento_detalle
-      WHERE movimiento_id = $1
-    `;
-    const result = await db.query(query, [id]);
-    res.json(result.rows);
+    // Get the historial entry
+    const historialQuery = `SELECT * FROM historial WHERE id = $1`;
+    const historialResult = await db.query(historialQuery, [id]);
+    const historial = historialResult.rows[0];
+
+    if (!historial) {
+      return res.status(404).json({ error: "Transacción no encontrada" });
+    }
+
+    // Get all movimiento_detalle for this movimiento_id
+    const detallesQuery = `SELECT * FROM movimiento_detalle WHERE movimiento_id = $1`;
+    const detallesResult = await db.query(detallesQuery, [id]);
+    const detalles = detallesResult.rows;
+
+    res.json({
+      historial,
+      detalles
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error al obtener los detalles de la transacción" });

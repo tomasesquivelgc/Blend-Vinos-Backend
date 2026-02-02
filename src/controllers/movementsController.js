@@ -1,8 +1,6 @@
 import db from "../db.js";
 import { addHistory } from "../models/historyModel.js";
-import {getWineByCodigo} from "../models/wineModel.js";
 import { findUserById } from "../models/userModel.js";
-import { addHistoryDetail } from "../models/historyDetailModel.js";
 
 export const registerMovement = async (req, res) => {
   const client = await db.connect();
@@ -62,14 +60,26 @@ export const registerMovement = async (req, res) => {
       }
 
       const wineRes = await client.query(
-        `SELECT * FROM vinos WHERE codigo = $1 AND activo = true`,
+        `
+        SELECT *
+        FROM vinos
+        WHERE activo = true
+          AND (
+            codigo = $1
+            OR codigoDeBarras::text = $1
+          )
+        LIMIT 1
+        `,
         [wineCode]
       );
 
+
       const wine = wineRes.rows[0];
+
       if (!wine) {
         throw new Error(`Vino ${wineCode} no encontrado`);
       }
+
 
       if (type === "VENTA" && wine.total < qty) {
         throw new Error(`Stock insuficiente para ${wine.nombre}`);
@@ -125,9 +135,9 @@ export const registerMovement = async (req, res) => {
 
       await client.query(
         `INSERT INTO movimiento_detalle
-          (movimiento_id, vino_id, cantidad, precio_unitario)
-         VALUES ($1,$2,$3,$4)`,
-        [movimiento.id, wineId, qty, unitPrice]
+          (movimiento_id, vino_id, vino_nombre, vino_codigo, cantidad, precio_unitario)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [movimiento.id, wineId, wine.nombre, wine.codigo, qty, unitPrice]
       );
     }
 
@@ -300,13 +310,24 @@ export const getTopSoldWines = async (req, res) => {
 export const getMovementDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const query = `
-      SELECT *
-      FROM movimiento_detalle
-      WHERE movimiento_id = $1
-    `;
-    const result = await db.query(query, [id]);
-    res.json(result.rows);
+    // Get the historial entry
+    const historialQuery = `SELECT * FROM historial WHERE id = $1`;
+    const historialResult = await db.query(historialQuery, [id]);
+    const historial = historialResult.rows[0];
+
+    if (!historial) {
+      return res.status(404).json({ error: "Transacción no encontrada" });
+    }
+
+    // Get all movimiento_detalle for this movimiento_id
+    const detallesQuery = `SELECT * FROM movimiento_detalle WHERE movimiento_id = $1`;
+    const detallesResult = await db.query(detallesQuery, [id]);
+    const detalles = detallesResult.rows;
+
+    res.json({
+      historial,
+      detalles
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error al obtener los detalles de la transacción" });

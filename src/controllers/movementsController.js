@@ -1,6 +1,5 @@
 import db from "../db.js";
 import { addHistory } from "../models/historyModel.js";
-import {getWineByCodigo} from "../models/wineModel.js";
 import { findUserById } from "../models/userModel.js";
 import { addHistoryDetail } from "../models/historyDetailModel.js";
 
@@ -62,14 +61,26 @@ export const registerMovement = async (req, res) => {
       }
 
       const wineRes = await client.query(
-        `SELECT * FROM vinos WHERE codigo = $1 AND activo = true`,
+        `
+        SELECT *
+        FROM vinos
+        WHERE activo = true
+          AND (
+            codigo = $1
+            OR codigoDeBarras::text = $1
+          )
+        LIMIT 1
+        `,
         [wineCode]
       );
 
+
       const wine = wineRes.rows[0];
+
       if (!wine) {
         throw new Error(`Vino ${wineCode} no encontrado`);
       }
+
 
       if (type === "VENTA" && wine.total < qty) {
         throw new Error(`Stock insuficiente para ${wine.nombre}`);

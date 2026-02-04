@@ -4,6 +4,7 @@ import authRoutes from './routes/auth.js';
 import wineRoutes from './routes/wineRoutes.js';
 import usersRoutes from './routes/userRoutes.js';
 import movementRoutes from './routes/movementRoutes.js';
+import promocionesRoutes from './routes/promocionesRoutes.js';
 import { authenticate } from './middlewares/auth.js';
 
 const app = express();
@@ -20,5 +21,6 @@ app.get('/', (req, res) => {
 app.use('/api/wines', authenticate, wineRoutes);
 app.use('/api/users', authenticate, usersRoutes);
 app.use('/api/movements', authenticate, movementRoutes);
+app.use('/api/promociones', authenticate, promocionesRoutes);
 
 export default app;

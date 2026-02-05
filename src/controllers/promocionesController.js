@@ -262,15 +262,34 @@ export const obtenerTodasLasPromociones = async (req, res) => {
     for (const row of rows) {
       const promoId = row.promocion_id;
 
+      let precio = row.precio;
+      const costoOriginal = row.precio;
+
+      if (req.user.rol_id === 2) precio *= 1.08;      // Socio
+      else if (req.user.rol_id === 3) precio *= 1.23; // Revendedor
+      else if (req.user.rol_id === 4) precio *= 1.15;  // Distribuidor
+      else if (req.user.rol_id === 5) precio *= 1.3; // Revendedor Socio
+
+      const precioSocio = costoOriginal * 1.08;
+      const precioRevendedor = costoOriginal * 1.23;
+      const precioDistribuidor = costoOriginal * 1.15;
+      const precioRevendedorSocio = costoOriginal * 1.3;
+      const precioRecomendado = costoOriginal * 1.78;
+
       if (!promocionesMap.has(promoId)) {
         promocionesMap.set(promoId, {
           id: promoId,
           codigo: row.promocion_codigo,
           nombre: row.promocion_nombre,
-          precio: row.precio,
+          precio: precio,
           active: row.active,
           created_at: row.created_at,
-          vinos: []
+          vinos: [],
+          precioSocio,
+          precioRevendedor,
+          precioDistribuidor,
+          precioRevendedorSocio,
+          precioRecomendado
         });
       }
 

@@ -23,6 +23,10 @@ describe('wineModel', () => {
   // Start a transaction before each test
   beforeEach(async () => {
     await pool.query('BEGIN');
+    await pool.query('DELETE FROM movimiento_detalle');
+    await pool.query('DELETE FROM historial');
+    await pool.query('DELETE FROM vinos_en_promocion');
+    await pool.query('DELETE FROM promociones');
     await pool.query('DELETE FROM vinos'); // Clean table
     testWine = await createWine(wineData);
     testWine2 = await createWine(wineData2);

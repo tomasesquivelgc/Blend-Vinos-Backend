@@ -1,6 +1,7 @@
 import db from "../db.js";
 import { addHistory } from "../models/historyModel.js";
 import { findUserById } from "../models/userModel.js";
+import { getWineById } from "../models/wineModel.js";
 
 export const registerMovement = async (req, res) => {
   const client = await db.connect();

@@ -8,7 +8,7 @@ export const registerMovement = async (req, res) => {
 
   try {
     const {
-      wine_id,          // ← en realidad SON CÓDIGOS (array de strings)
+      product_ids,          // ← en realidad SON CÓDIGOS (array de strings)
       quantity,         // array de numbers
       type,
       client_id = null,
@@ -21,12 +21,12 @@ export const registerMovement = async (req, res) => {
     if (!["COMPRA", "VENTA"].includes(type)) {
       return res.status(400).json({ error: "Tipo de transacción inválido" });
     }
-    if (!Array.isArray(wine_id) || !Array.isArray(quantity)) {
-      return res.status(400).json({ error: "wine_id y quantity deben ser arrays" });
+    if (!Array.isArray(product_ids) || !Array.isArray(quantity)) {
+      return res.status(400).json({ error: "product_ids y quantity deben ser arrays" });
     }
 
-    if (wine_id.length !== quantity.length) {
-      return res.status(400).json({ error: "wine_id y quantity deben tener la misma longitud" });
+    if (product_ids.length !== quantity.length) {
+      return res.status(400).json({ error: "product_ids y quantity deben tener la misma longitud" });
     }
 
     await client.query("BEGIN");
@@ -52,8 +52,8 @@ export const registerMovement = async (req, res) => {
     const wineCache = {};
 
     // --- Validate stock & calculate totals ---
-    for (let i = 0; i < wine_id.length; i++) {
-      const wineCode = wine_id[i]; // ← ES UN CÓDIGO
+    for (let i = 0; i < product_ids.length; i++) {
+      const wineCode = product_ids[i]; // ← ES UN CÓDIGO
       const qty = quantity[i];
 
       if (qty <= 0) {
@@ -136,23 +136,17 @@ export const registerMovement = async (req, res) => {
 
       await client.query(
         `INSERT INTO movimiento_detalle
-          (movimiento_id, vino_id, vino_nombre, vino_codigo, cantidad, precio_unitario)
-         VALUES ($1,$2,$3,$4,$5,$6)`,
-        [movimiento.id, wineId, wine.nombre, wine.codigo, qty, unitPrice]
+          (movimiento_id, referencia_id, producto_nombre, producto_codigo, cantidad, precio_unitario, tipo_producto)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [movimiento.id, wineId, wine.nombre, wine.codigo, qty, unitPrice, 'vino']
       );
     }
 
     await client.query("COMMIT");
 
-    // compat tests legacy
-    const responseHistory = {
-      ...movimiento,
-      vino_id: Object.keys(wineCache)[0]
-    };
-
     res.status(201).json({
       message: "Transacción creada exitosamente",
-      history: responseHistory
+      history: movimiento
     });
 
   } catch (error) {
